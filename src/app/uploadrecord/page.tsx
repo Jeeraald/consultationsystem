@@ -37,7 +37,7 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
-  // Auto-hide status after 2 seconds
+  // Auto-hide status after 2s
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -169,10 +169,10 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Display "Missed" if value is -1
+  // ✅ Helper: display "Missed" if value is -1
   const displayValue = (value: number | string) => {
     if (Number(value) === -1) {
-      return <span className="text-red-600 italic font-semibold">Missed</span>;
+      return <span className="text-red-600 italic">Missed</span>;
     }
     return value;
   };
@@ -252,29 +252,27 @@ export default function UploadRecord() {
               <tbody>
                 {filteredRecords.map((r) => (
                   <tr key={r.idNumber} className="text-center border-t">
-                    {(
-                      Object.entries({
-                        idNumber: r.idNumber,
-                        lastName: r.lastName,
-                        firstName: r.firstName,
-                        attendance: r.attendance,
-                        quiz1: r.quiz1,
-                        quiz2: r.quiz2,
-                        quiz3: r.quiz3,
-                        quiz4: r.quiz4,
-                        prelim: r.prelim,
-                        midtermwrittenexam: r.midtermwrittenexam,
-                        assignment1: r.assignment1,
-                        activity1: r.activity1,
-                        midtermlabexam: r.midtermlabexam,
-                        midtermGrade: r.midtermGrade,
-                      }) as [keyof StudentRecord, number | string][]
-                    ).map(([key, value]) => (
+                    {Object.entries({
+                      idNumber: r.idNumber,
+                      lastName: r.lastName,
+                      firstName: r.firstName,
+                      attendance: r.attendance,
+                      quiz1: r.quiz1,
+                      quiz2: r.quiz2,
+                      quiz3: r.quiz3,
+                      quiz4: r.quiz4,
+                      prelim: r.prelim,
+                      midtermwrittenexam: r.midtermwrittenexam,
+                      assignment1: r.assignment1,
+                      activity1: r.activity1,
+                      midtermlabexam: r.midtermlabexam,
+                      midtermGrade: r.midtermGrade,
+                    }).map(([key, value]) => (
                       <td key={key} className="border px-2 py-1">
                         {editingId === r.idNumber ? (
                           <input
                             type="text"
-                            value={String(editedRecord[key] ?? value)}
+                            value={String((editedRecord as any)[key] ?? value)}
                             onChange={(e) =>
                               setEditedRecord({
                                 ...editedRecord,
