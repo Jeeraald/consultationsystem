@@ -3,12 +3,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/firebaseConfig";
-import {
-  collection,
-  doc,
-  setDoc,
-  onSnapshot,
-} from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot } from "firebase/firestore";
 
 interface StudentRecord {
   idNumber: string;
@@ -40,20 +35,21 @@ export default function UploadRecord() {
   const [records, setRecords] = useState<StudentRecord[]>([]);
   const [search, setSearch] = useState("");
 
+  // Firestore listener
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
-      const data: StudentRecord[] = snapshot.docs.map((d) => ({
-        idNumber: d.id,
-        ...(d.data() as object),
-      })) as StudentRecord[];
+      const data: StudentRecord[] = snapshot.docs.map((d) => {
+        const docData = d.data() as Omit<StudentRecord, "idNumber">;
+        return { idNumber: d.id, ...docData };
+      });
       setRecords(data);
     });
+
     return () => unsubscribe();
   }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFile = e.target.files?.[0];
-    if (!uploadedFile) return;
+    const uploadedFile = e.target.files?.[0] ?? null;
     setFile(uploadedFile);
   };
 
@@ -65,6 +61,7 @@ export default function UploadRecord() {
 
     setStatus("Reading Excel file...");
     setIsUploading(true);
+
     const reader = new FileReader();
 
     reader.onload = async (e) => {
@@ -72,7 +69,11 @@ export default function UploadRecord() {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        // Strongly typed rows
+        const rows: (string | number)[][] = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+        }) as (string | number)[][];
 
         if (rows.length <= 1) {
           setStatus("❌ No student records found in the file.");
@@ -82,9 +83,9 @@ export default function UploadRecord() {
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
-          const idNumber = row[0] ? String(row[0]).trim() : "";
-          const lastName = row[1] ? String(row[1]).trim() : "";
-          const firstName = row[2] ? String(row[2]).trim() : "";
+          const idNumber = String(row[0] ?? "").trim();
+          const lastName = String(row[1] ?? "").trim();
+          const firstName = String(row[2] ?? "").trim();
 
           if (!idNumber || !firstName || !lastName) continue;
 
@@ -92,23 +93,23 @@ export default function UploadRecord() {
             idNumber,
             firstName,
             lastName,
-            attendance: Number(row[3]) || 0,
-            activity1: Number(row[4]) || 0,
-            activity2: Number(row[5]) || 0,
-            activity3: Number(row[6]) || 0,
-            assignment1: Number(row[7]) || 0,
-            assignment2: Number(row[8]) || 0,
-            assignment3: Number(row[9]) || 0,
-            assignment4: Number(row[10]) || 0,
-            quiz1: Number(row[11]) || 0,
-            quiz2: Number(row[12]) || 0,
-            quiz3: Number(row[13]) || 0,
-            quiz4: Number(row[14]) || 0,
-            quiz5: Number(row[15]) || 0,
-            prelim: Number(row[16]) || 0,
-            midtermwrittenexam: Number(row[17]) || 0,
-            midtermlabexam: Number(row[18]) || 0,
-            midtermGrade: Number(row[19]) || 0,
+            attendance: Number(row[3] ?? 0),
+            activity1: Number(row[4] ?? 0),
+            activity2: Number(row[5] ?? 0),
+            activity3: Number(row[6] ?? 0),
+            assignment1: Number(row[7] ?? 0),
+            assignment2: Number(row[8] ?? 0),
+            assignment3: Number(row[9] ?? 0),
+            assignment4: Number(row[10] ?? 0),
+            quiz1: Number(row[11] ?? 0),
+            quiz2: Number(row[12] ?? 0),
+            quiz3: Number(row[13] ?? 0),
+            quiz4: Number(row[14] ?? 0),
+            quiz5: Number(row[15] ?? 0),
+            prelim: Number(row[16] ?? 0),
+            midtermwrittenexam: Number(row[17] ?? 0),
+            midtermlabexam: Number(row[18] ?? 0),
+            midtermGrade: Number(row[19] ?? 0),
           };
 
           await setDoc(doc(collection(db, "classrecord"), idNumber), dataToSave, {
@@ -130,8 +131,7 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  const normalized = (v: unknown) =>
-    (v === undefined || v === null ? "" : String(v)).toLowerCase();
+  const normalized = (v: unknown) => (v === undefined || v === null ? "" : String(v)).toLowerCase();
 
   const filteredRecords = records.filter((r) => {
     const q = search.trim().toLowerCase();
@@ -150,9 +150,8 @@ export default function UploadRecord() {
           Upload Class Record
         </h1>
 
-        {/* Search (left) and Upload (right) */}
+        {/* Search and Upload */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          {/* Search on left */}
           <input
             type="text"
             placeholder="Search by ID or name..."
@@ -161,7 +160,6 @@ export default function UploadRecord() {
             className="p-2 border rounded w-full md:w-1/3"
           />
 
-          {/* Upload on right */}
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
@@ -173,9 +171,7 @@ export default function UploadRecord() {
               onClick={handleUpload}
               disabled={isUploading}
               className={`px-6 py-2 rounded text-white font-semibold ${
-                isUploading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
+                isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {isUploading ? "Uploading..." : "Upload"}

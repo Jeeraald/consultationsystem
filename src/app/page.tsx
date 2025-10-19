@@ -7,7 +7,16 @@ import { db } from "@/lib/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti";
 
+// Types
 type FocusKeys = "first" | "last" | "id";
+
+interface StudentData {
+  firstName: string;
+  lastName: string;
+  idNumber: string;
+  midtermGrade: number;
+  [key: string]: any; // optional for other fields if needed
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -18,27 +27,27 @@ export default function HomePage() {
   const [idNumber, setIdNumber] = useState("");
 
   // Placeholder state
-  const [placeholders, setPlaceholders] = useState({
+  const [placeholders, setPlaceholders] = useState<Record<FocusKeys, string>>({
     first: "",
     last: "",
     id: "",
   });
 
-  const texts = {
+  const texts: Record<FocusKeys, string> = {
     first: "ex: John",
     last: "ex: Doe",
     id: "ex: 2022305627",
   };
 
   // Focus state
-  const [focused, setFocused] = useState<{ first: boolean; last: boolean; id: boolean }>({
+  const [focused, setFocused] = useState<Record<FocusKeys, boolean>>({
     first: false,
     last: false,
     id: false,
   });
 
   // Cleared state for independent vanish
-  const [cleared, setCleared] = useState<{ first: boolean; last: boolean; id: boolean }>({
+  const [cleared, setCleared] = useState<Record<FocusKeys, boolean>>({
     first: false,
     last: false,
     id: false,
@@ -46,7 +55,7 @@ export default function HomePage() {
 
   // Other states
   const [error, setError] = useState("");
-  const [studentData, setStudentData] = useState<any>(null);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [showRecordButton, setShowRecordButton] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -81,7 +90,7 @@ export default function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [focused, cleared]);
+  }, [focused, cleared, texts, placeholders]);
 
   // Form submit
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,7 +102,7 @@ export default function HomePage() {
       let found = false;
 
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
+        const data = doc.data() as StudentData;
         const dbFirst = (data.firstName || "").trim().toLowerCase();
         const dbLast = (data.lastName || "").trim().toLowerCase();
         const dbId = String(data.idNumber || "").trim();
