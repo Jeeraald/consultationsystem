@@ -3,23 +3,27 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Define a proper type for student data
 interface StudentData {
+  idNumber: string;
   firstName: string;
   lastName: string;
-  idNumber: string;
-  attendance?: number;
-  activity1?: number;
-  assignment1?: number;
-  quiz1?: number;
-  quiz2?: number;
-  quiz3?: number;
-  quiz4?: number;
-  prelim?: number;
-  midtermwrittenexam?: number;
-  midtermlabexam?: number;
+  attendance: number;
+  activity1: number;
+  activity2: number;
+  activity3: number;
+  assignment1: number;
+  assignment2: number;
+  assignment3: number;
+  assignment4: number;
+  quiz1: number;
+  quiz2: number;
+  quiz3: number;
+  quiz4: number;
+  quiz5: number;
+  prelim: number;
+  midtermwrittenexam: number;
+  midtermlabexam: number;
   midtermGrade: number;
-  [key: string]: any; // optional for other fields if needed
 }
 
 export default function ViewRecordPage() {
@@ -28,7 +32,7 @@ export default function ViewRecordPage() {
 
   useEffect(() => {
     const record = sessionStorage.getItem("studentRecord");
-    if (record) setStudentData(JSON.parse(record) as StudentData);
+    if (record) setStudentData(JSON.parse(record));
     else router.push("/"); // redirect if no data
   }, [router]);
 
@@ -37,18 +41,13 @@ export default function ViewRecordPage() {
   const lectureWeight = 0.67;
   const labWeight = 0.33;
 
-  // Helper function for displaying scores
-  const formatScore = (value?: number | null) => {
+  const formatScore = (value: number | undefined) => {
     if (value === -1) return "Missing";
     if (value === null || value === undefined) return "";
     return value;
   };
 
-  // Determine color for midterm grade
-  const grade = Number(studentData.midtermGrade);
-  const gradeColor = grade >= 3.25 ? "text-red-600" : "text-green-600";
-
-  // Format name properly
+  const gradeColor = studentData.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600";
   const fullName = `${studentData.lastName?.toUpperCase()}, ${studentData.firstName?.toUpperCase()}`;
 
   return (

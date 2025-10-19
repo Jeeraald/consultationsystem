@@ -1,21 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import Confetti from "react-confetti";
 
-// Types
 type FocusKeys = "first" | "last" | "id";
 
 interface StudentData {
   firstName: string;
   lastName: string;
   idNumber: string;
+  attendance: number;
+  activity1: number;
+  activity2: number;
+  activity3: number;
+  assignment1: number;
+  assignment2: number;
+  assignment3: number;
+  assignment4: number;
+  quiz1: number;
+  quiz2: number;
+  quiz3: number;
+  quiz4: number;
+  quiz5: number;
+  prelim: number;
+  midtermwrittenexam: number;
+  midtermlabexam: number;
   midtermGrade: number;
-  [key: string]: any; // optional for other fields if needed
 }
 
 export default function HomePage() {
@@ -33,11 +47,14 @@ export default function HomePage() {
     id: "",
   });
 
-  const texts: Record<FocusKeys, string> = {
-    first: "ex: John",
-    last: "ex: Doe",
-    id: "ex: 2022305627",
-  };
+  const texts = useMemo(
+    () => ({
+      first: "ex: John",
+      last: "ex: Doe",
+      id: "ex: 2022305627",
+    }),
+    []
+  );
 
   // Focus state
   const [focused, setFocused] = useState<Record<FocusKeys, boolean>>({
@@ -46,14 +63,13 @@ export default function HomePage() {
     id: false,
   });
 
-  // Cleared state for independent vanish
+  // Cleared state
   const [cleared, setCleared] = useState<Record<FocusKeys, boolean>>({
     first: false,
     last: false,
     id: false,
   });
 
-  // Other states
   const [error, setError] = useState("");
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [showRecordButton, setShowRecordButton] = useState(false);
@@ -90,9 +106,8 @@ export default function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [focused, cleared, texts, placeholders]);
+  }, [focused, cleared, placeholders, texts]);
 
-  // Form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -145,7 +160,6 @@ export default function HomePage() {
     setCleared({ first: false, last: false, id: false });
   };
 
-  // Focus & blur handlers
   const handleFocus = (key: FocusKeys) => {
     setFocused((prev) => ({ ...prev, [key]: true }));
     setCleared((prev) => ({ ...prev, [key]: true }));
@@ -153,11 +167,7 @@ export default function HomePage() {
 
   const handleBlur = (key: FocusKeys) => {
     setFocused((prev) => ({ ...prev, [key]: false }));
-    if (
-      (key === "first" && !firstName) ||
-      (key === "last" && !lastName) ||
-      (key === "id" && !idNumber)
-    ) {
+    if ((key === "first" && !firstName) || (key === "last" && !lastName) || (key === "id" && !idNumber)) {
       setCleared((prev) => ({ ...prev, [key]: false }));
     }
   };
