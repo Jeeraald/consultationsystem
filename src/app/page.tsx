@@ -113,6 +113,8 @@ export default function HomePage() {
     setError("");
 
     try {
+      if (!db) throw new Error("Firestore database not initialized"); // ✅ safe guard
+
       const querySnapshot = await getDocs(collection(db, "classrecord"));
       let found = false;
 

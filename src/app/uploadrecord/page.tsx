@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/firebaseConfig";
-import { collection, doc, setDoc, onSnapshot } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, Firestore } from "firebase/firestore";
 
 interface StudentRecord {
   idNumber: string;
@@ -35,16 +35,22 @@ export default function UploadRecord() {
   const [records, setRecords] = useState<StudentRecord[]>([]);
   const [search, setSearch] = useState("");
 
+  // ✅ Safe Firestore reference
+  const classRecordCollection = db ? collection(db as Firestore, "classrecord") : null;
+
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
+    if (!classRecordCollection) return;
+
+    const unsubscribe = onSnapshot(classRecordCollection, (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => ({
         idNumber: d.id,
         ...(d.data() as Omit<StudentRecord, "idNumber">),
       }));
       setRecords(data);
     });
+
     return () => unsubscribe();
-  }, []);
+  }, [classRecordCollection]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -57,6 +63,10 @@ export default function UploadRecord() {
       alert("Please select an Excel file first.");
       return;
     }
+    if (!classRecordCollection) {
+      setStatus("❌ Firestore not initialized.");
+      return;
+    }
 
     setStatus("Reading Excel file...");
     setIsUploading(true);
@@ -67,7 +77,7 @@ export default function UploadRecord() {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const rows: (string | number)[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         if (rows.length <= 1) {
           setStatus("❌ No student records found in the file.");
@@ -106,9 +116,7 @@ export default function UploadRecord() {
             midtermGrade: Number(row[19]) || 0,
           };
 
-          await setDoc(doc(collection(db, "classrecord"), idNumber), dataToSave, {
-            merge: true,
-          });
+          await setDoc(doc(classRecordCollection, idNumber), dataToSave, { merge: true });
 
           setStatus(`Uploading record ${i} of ${rows.length - 1}...`);
         }
@@ -140,13 +148,9 @@ export default function UploadRecord() {
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
       <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-7xl">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">
-          Upload Class Record
-        </h1>
+        <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">Upload Class Record</h1>
 
-        {/* Search (left) and Upload (right) */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          {/* Search on left */}
           <input
             type="text"
             placeholder="Search by ID or name..."
@@ -154,8 +158,6 @@ export default function UploadRecord() {
             onChange={(e) => setSearch(e.target.value)}
             className="p-2 border rounded w-full md:w-1/3"
           />
-
-          {/* Upload on right */}
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
@@ -167,9 +169,7 @@ export default function UploadRecord() {
               onClick={handleUpload}
               disabled={isUploading}
               className={`px-6 py-2 rounded text-white font-semibold ${
-                isUploading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
+                isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {isUploading ? "Uploading..." : "Upload"}
@@ -179,7 +179,6 @@ export default function UploadRecord() {
 
         {status && <p className="text-center mb-6 text-gray-700 font-medium">{status}</p>}
 
-        {/* Table */}
         {filteredRecords.length > 0 ? (
           <div className="overflow-x-auto max-h-[70vh] border rounded-lg">
             <table className="min-w-full text-sm border-collapse">
