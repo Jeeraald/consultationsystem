@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/firebaseConfig";
-import { collection, doc, setDoc, onSnapshot, Firestore } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot } from "firebase/firestore";
 
 interface StudentRecord {
   idNumber: string;
@@ -35,22 +35,16 @@ export default function UploadRecord() {
   const [records, setRecords] = useState<StudentRecord[]>([]);
   const [search, setSearch] = useState("");
 
-  // ✅ Safe Firestore reference
-  const classRecordCollection = db ? collection(db as Firestore, "classrecord") : null;
-
   useEffect(() => {
-    if (!classRecordCollection) return;
-
-    const unsubscribe = onSnapshot(classRecordCollection, (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => ({
         idNumber: d.id,
         ...(d.data() as Omit<StudentRecord, "idNumber">),
       }));
       setRecords(data);
     });
-
     return () => unsubscribe();
-  }, [classRecordCollection]);
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -63,10 +57,6 @@ export default function UploadRecord() {
       alert("Please select an Excel file first.");
       return;
     }
-    if (!classRecordCollection) {
-      setStatus("❌ Firestore not initialized.");
-      return;
-    }
 
     setStatus("Reading Excel file...");
     setIsUploading(true);
@@ -77,13 +67,15 @@ export default function UploadRecord() {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: (string | number)[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         if (rows.length <= 1) {
           setStatus("❌ No student records found in the file.");
           setIsUploading(false);
           return;
         }
+
+        const classCollection = collection(db, "classrecord"); // ✅ fixed db reference
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
@@ -116,8 +108,7 @@ export default function UploadRecord() {
             midtermGrade: Number(row[19]) || 0,
           };
 
-          await setDoc(doc(classRecordCollection, idNumber), dataToSave, { merge: true });
-
+          await setDoc(doc(classCollection, idNumber), dataToSave, { merge: true });
           setStatus(`Uploading record ${i} of ${rows.length - 1}...`);
         }
 
@@ -148,7 +139,9 @@ export default function UploadRecord() {
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
       <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-7xl">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">Upload Class Record</h1>
+        <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">
+          Upload Class Record
+        </h1>
 
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <input
@@ -158,6 +151,7 @@ export default function UploadRecord() {
             onChange={(e) => setSearch(e.target.value)}
             className="p-2 border rounded w-full md:w-1/3"
           />
+
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
@@ -228,11 +222,7 @@ export default function UploadRecord() {
                     <td className="border px-3 py-1">{r.prelim}</td>
                     <td className="border px-3 py-1">{r.midtermwrittenexam}</td>
                     <td className="border px-3 py-1">{r.midtermlabexam}</td>
-                    <td
-                      className={`border px-3 py-1 font-semibold ${
-                        r.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600"
-                      }`}
-                    >
+                    <td className={`border px-3 py-1 font-semibold ${r.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600"}`}>
                       {r.midtermGrade}
                     </td>
                   </tr>

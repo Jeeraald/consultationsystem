@@ -83,7 +83,6 @@ export default function HomePage() {
   useEffect(() => {
     const animate = () => {
       const newPlaceholders = { ...placeholders };
-
       (["first", "last", "id"] as FocusKeys[]).forEach((key) => {
         if (!cleared[key] && !focused[key]) {
           newPlaceholders[key] = deletingRef.current
@@ -93,7 +92,6 @@ export default function HomePage() {
       });
 
       setPlaceholders(newPlaceholders);
-
       indexRef.current = deletingRef.current ? indexRef.current - 1 : indexRef.current + 1;
 
       const maxLength = Math.max(...Object.values(texts).map((t) => t.length));
@@ -113,8 +111,6 @@ export default function HomePage() {
     setError("");
 
     try {
-      if (!db) throw new Error("Firestore database not initialized"); // ✅ safe guard
-
       const querySnapshot = await getDocs(collection(db, "classrecord"));
       let found = false;
 
