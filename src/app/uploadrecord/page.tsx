@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { db } from "@/lib/firebaseConfig";
-import { collection, doc, setDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+} from "firebase/firestore";
 
 interface StudentRecord {
   idNumber: string;
@@ -11,17 +17,11 @@ interface StudentRecord {
   lastName: string;
   attendance: number;
   activity1: number;
-  activity2: number;
-  activity3: number;
   assignment1: number;
-  assignment2: number;
-  assignment3: number;
-  assignment4: number;
   quiz1: number;
   quiz2: number;
   quiz3: number;
   quiz4: number;
-  quiz5: number;
   prelim: number;
   midtermwrittenexam: number;
   midtermlabexam: number;
@@ -33,8 +33,19 @@ export default function UploadRecord() {
   const [status, setStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [records, setRecords] = useState<StudentRecord[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
+  // Auto-hide status after 2s
+  useEffect(() => {
+    if (status) {
+      const timer = setTimeout(() => setStatus(""), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  // Load Firestore data
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => ({
@@ -46,12 +57,14 @@ export default function UploadRecord() {
     return () => unsubscribe();
   }, []);
 
+  // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
     setFile(uploadedFile);
   };
 
+  // Upload Excel to Firestore
   const handleUpload = async () => {
     if (!file) {
       alert("Please select an Excel file first.");
@@ -75,7 +88,7 @@ export default function UploadRecord() {
           return;
         }
 
-        const classCollection = collection(db, "classrecord"); // ✅ fixed db reference
+        const classCollection = collection(db, "classrecord");
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
@@ -90,22 +103,16 @@ export default function UploadRecord() {
             firstName,
             lastName,
             attendance: Number(row[3]) || 0,
-            activity1: Number(row[4]) || 0,
-            activity2: Number(row[5]) || 0,
-            activity3: Number(row[6]) || 0,
-            assignment1: Number(row[7]) || 0,
-            assignment2: Number(row[8]) || 0,
-            assignment3: Number(row[9]) || 0,
-            assignment4: Number(row[10]) || 0,
-            quiz1: Number(row[11]) || 0,
-            quiz2: Number(row[12]) || 0,
-            quiz3: Number(row[13]) || 0,
-            quiz4: Number(row[14]) || 0,
-            quiz5: Number(row[15]) || 0,
-            prelim: Number(row[16]) || 0,
-            midtermwrittenexam: Number(row[17]) || 0,
-            midtermlabexam: Number(row[18]) || 0,
-            midtermGrade: Number(row[19]) || 0,
+            quiz1: Number(row[4]) || 0,
+            quiz2: Number(row[5]) || 0,
+            quiz3: Number(row[6]) || 0,
+            quiz4: Number(row[7]) || 0,
+            prelim: Number(row[8]) || 0,
+            midtermwrittenexam: Number(row[9]) || 0,
+            assignment1: Number(row[10]) || 0,
+            activity1: Number(row[11]) || 0,
+            midtermlabexam: Number(row[12]) || 0,
+            midtermGrade: Number(row[13]) || 0,
           };
 
           await setDoc(doc(classCollection, idNumber), dataToSave, { merge: true });
@@ -124,17 +131,51 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  const normalized = (v: unknown) => (v === undefined || v === null ? "" : String(v)).toLowerCase();
+  // Edit handler
+  const handleEdit = (record: StudentRecord) => {
+    setEditingId(record.idNumber);
+    setEditedRecord({ ...record });
+  };
+
+  // Save changes
+  const handleSave = async () => {
+    if (!editingId || !editedRecord) return;
+
+    try {
+      await setDoc(doc(db, "classrecord", editingId), editedRecord, { merge: true });
+      setStatus("✅ Successfully saved!");
+      setEditingId(null);
+      setEditedRecord({});
+    } catch (error) {
+      console.error(error);
+      setStatus("❌ Failed to save changes.");
+    }
+  };
+
+  // Delete record
+  const handleDelete = async (record: StudentRecord) => {
+    if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
+      await deleteDoc(doc(db, "classrecord", record.idNumber));
+      setStatus(`🗑️ Record ${record.idNumber} deleted!`);
+    }
+  };
 
   const filteredRecords = records.filter((r) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
+    const q = search.toLowerCase();
     return (
-      normalized(r.idNumber).includes(q) ||
-      normalized(r.firstName).includes(q) ||
-      normalized(r.lastName).includes(q)
+      r.idNumber.toLowerCase().includes(q) ||
+      r.firstName.toLowerCase().includes(q) ||
+      r.lastName.toLowerCase().includes(q)
     );
   });
+
+  // ✅ Helper: display "Missed" if value is -1
+  const displayValue = (value: number | string) => {
+    if (Number(value) === -1) {
+      return <span className="text-red-600 italic">Missed</span>;
+    }
+    return value;
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
@@ -151,7 +192,6 @@ export default function UploadRecord() {
             onChange={(e) => setSearch(e.target.value)}
             className="p-2 border rounded w-full md:w-1/3"
           />
-
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
@@ -163,7 +203,9 @@ export default function UploadRecord() {
               onClick={handleUpload}
               disabled={isUploading}
               className={`px-6 py-2 rounded text-white font-semibold ${
-                isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                isUploading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {isUploading ? "Uploading..." : "Upload"}
@@ -171,7 +213,19 @@ export default function UploadRecord() {
           </div>
         </div>
 
-        {status && <p className="text-center mb-6 text-gray-700 font-medium">{status}</p>}
+        {status && (
+          <div
+            className={`fixed top-5 right-5 px-4 py-2 rounded-lg text-white shadow-lg ${
+              status.includes("✅")
+                ? "bg-green-600"
+                : status.includes("❌")
+                ? "bg-red-600"
+                : "bg-blue-600"
+            }`}
+          >
+            {status}
+          </div>
+        )}
 
         {filteredRecords.length > 0 ? (
           <div className="overflow-x-auto max-h-[70vh] border rounded-lg">
@@ -182,48 +236,79 @@ export default function UploadRecord() {
                   <th className="border px-3 py-2">Last Name</th>
                   <th className="border px-3 py-2">First Name</th>
                   <th className="border px-3 py-2">Attendance</th>
-                  <th className="border px-3 py-2">Activity 1</th>
-                  <th className="border px-3 py-2">Activity 2</th>
-                  <th className="border px-3 py-2">Activity 3</th>
-                  <th className="border px-3 py-2">Assignment 1</th>
-                  <th className="border px-3 py-2">Assignment 2</th>
-                  <th className="border px-3 py-2">Assignment 3</th>
-                  <th className="border px-3 py-2">Assignment 4</th>
                   <th className="border px-3 py-2">Quiz 1</th>
                   <th className="border px-3 py-2">Quiz 2</th>
                   <th className="border px-3 py-2">Quiz 3</th>
                   <th className="border px-3 py-2">Quiz 4</th>
-                  <th className="border px-3 py-2">Quiz 5</th>
                   <th className="border px-3 py-2">Prelim</th>
                   <th className="border px-3 py-2">Midterm Written</th>
+                  <th className="border px-3 py-2">Assignment 1</th>
+                  <th className="border px-3 py-2">Activity 1</th>
                   <th className="border px-3 py-2">Midterm Lab</th>
                   <th className="border px-3 py-2">Midterm Grade</th>
+                  <th className="border px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((r) => (
                   <tr key={r.idNumber} className="text-center border-t">
-                    <td className="border px-3 py-1">{r.idNumber}</td>
-                    <td className="border px-3 py-1">{r.lastName}</td>
-                    <td className="border px-3 py-1">{r.firstName}</td>
-                    <td className="border px-3 py-1">{r.attendance}</td>
-                    <td className="border px-3 py-1">{r.activity1}</td>
-                    <td className="border px-3 py-1">{r.activity2}</td>
-                    <td className="border px-3 py-1">{r.activity3}</td>
-                    <td className="border px-3 py-1">{r.assignment1}</td>
-                    <td className="border px-3 py-1">{r.assignment2}</td>
-                    <td className="border px-3 py-1">{r.assignment3}</td>
-                    <td className="border px-3 py-1">{r.assignment4}</td>
-                    <td className="border px-3 py-1">{r.quiz1}</td>
-                    <td className="border px-3 py-1">{r.quiz2}</td>
-                    <td className="border px-3 py-1">{r.quiz3}</td>
-                    <td className="border px-3 py-1">{r.quiz4}</td>
-                    <td className="border px-3 py-1">{r.quiz5}</td>
-                    <td className="border px-3 py-1">{r.prelim}</td>
-                    <td className="border px-3 py-1">{r.midtermwrittenexam}</td>
-                    <td className="border px-3 py-1">{r.midtermlabexam}</td>
-                    <td className={`border px-3 py-1 font-semibold ${r.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600"}`}>
-                      {r.midtermGrade}
+                    {Object.entries({
+                      idNumber: r.idNumber,
+                      lastName: r.lastName,
+                      firstName: r.firstName,
+                      attendance: r.attendance,
+                      quiz1: r.quiz1,
+                      quiz2: r.quiz2,
+                      quiz3: r.quiz3,
+                      quiz4: r.quiz4,
+                      prelim: r.prelim,
+                      midtermwrittenexam: r.midtermwrittenexam,
+                      assignment1: r.assignment1,
+                      activity1: r.activity1,
+                      midtermlabexam: r.midtermlabexam,
+                      midtermGrade: r.midtermGrade,
+                    }).map(([key, value]) => (
+                      <td key={key} className="border px-2 py-1">
+                        {editingId === r.idNumber ? (
+                          <input
+                            type="text"
+                            value={String((editedRecord as any)[key] ?? value)}
+                            onChange={(e) =>
+                              setEditedRecord({
+                                ...editedRecord,
+                                [key]: e.target.value,
+                              })
+                            }
+                            className="w-full border rounded px-1 text-center"
+                          />
+                        ) : (
+                          displayValue(value)
+                        )}
+                      </td>
+                    ))}
+
+                    <td className="border px-3 py-1 flex gap-2 justify-center">
+                      {editingId === r.idNumber ? (
+                        <button
+                          onClick={handleSave}
+                          className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleEdit(r)}
+                          className="px-2 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(r)}
+                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -7,23 +7,23 @@ interface StudentData {
   idNumber: string;
   firstName: string;
   lastName: string;
-  attendance: number;
-  activity1: number;
-  activity2: number;
-  activity3: number;
-  assignment1: number;
-  assignment2: number;
-  assignment3: number;
-  assignment4: number;
-  quiz1: number;
-  quiz2: number;
-  quiz3: number;
-  quiz4: number;
-  quiz5: number;
-  prelim: number;
-  midtermwrittenexam: number;
-  midtermlabexam: number;
-  midtermGrade: number;
+  attendance: number | string;
+  activity1: number | string;
+  activity2?: number | string;
+  activity3?: number | string;
+  assignment1: number | string;
+  assignment2?: number | string;
+  assignment3?: number | string;
+  assignment4?: number | string;
+  quiz1: number | string;
+  quiz2: number | string;
+  quiz3: number | string;
+  quiz4: number | string;
+  quiz5?: number | string;
+  prelim: number | string;
+  midtermwrittenexam: number | string;
+  midtermlabexam: number | string;
+  midtermGrade: number | string;
 }
 
 export default function ViewRecordPage() {
@@ -41,14 +41,39 @@ export default function ViewRecordPage() {
   const lectureWeight = 0.67;
   const labWeight = 0.33;
 
-  const formatScore = (value: number | undefined) => {
-    if (value === -1) return "Missing";
-    if (value === null || value === undefined) return "";
+  // Robust formatScore:
+  // - treat number -1 or string "-1" as "Missed"
+  // - return numeric values as numbers
+  // - return empty string for null/undefined/empty
+  // - otherwise return the original value
+  const formatScore = (value: number | string | undefined) => {
+    if (value === null || value === undefined || value === "") return "";
+    // try convert to number
+    const num = Number(value);
+    if (!Number.isNaN(num)) {
+      if (num === -1) {
+        return (
+          <span className="text-red-600 italic">
+            Missed
+          </span>
+        );
+      }
+      // for numeric values, show the number (no trailing .0 if integer)
+      return Number.isInteger(num) ? num : Number(num.toFixed(2));
+    }
+    // fallback: value is not numeric (string) — return it
     return value;
   };
 
-  const gradeColor = studentData.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600";
-  const fullName = `${studentData.lastName?.toUpperCase()}, ${studentData.firstName?.toUpperCase()}`;
+  const gradeNum = Number(studentData.midtermGrade);
+  const gradeColor =
+    !Number.isNaN(gradeNum) && gradeNum >= 3.25
+      ? "text-red-600 font-bold"
+      : "text-green-600 font-bold";
+
+  const fullName = `${String(studentData.lastName || "").toUpperCase()}, ${String(
+    studentData.firstName || ""
+  ).toUpperCase()}`;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200 p-2 sm:p-4 md:p-6">
@@ -65,7 +90,7 @@ export default function ViewRecordPage() {
           <p>ID Number: {studentData.idNumber}</p>
         </div>
 
-        {/* Responsive Table */}
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm sm:text-base">
             <thead>
@@ -84,35 +109,50 @@ export default function ViewRecordPage() {
                 </td>
                 <td className="px-2 sm:px-4 py-2 border font-semibold">20%</td>
                 <td className="px-2 sm:px-4 py-2 border">Attendance</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.attendance)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.attendance)}
+                </td>
               </tr>
+
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border font-semibold" rowSpan={5}>
                   40%
                 </td>
                 <td className="px-2 sm:px-4 py-2 border">Quiz 1</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.quiz1)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.quiz1)}
+                </td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border">Quiz 2</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.quiz2)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.quiz2)}
+                </td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border">Quiz 3</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.quiz3)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.quiz3)}
+                </td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border">Quiz 4</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.quiz4)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.quiz4)}
+                </td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border">Prelim</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.prelim)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.prelim)}
+                </td>
               </tr>
               <tr className="bg-gray-50">
                 <td className="px-2 sm:px-4 py-2 border font-semibold">40%</td>
                 <td className="px-2 sm:px-4 py-2 border">Midterm Exam</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.midtermwrittenexam)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.midtermwrittenexam)}
+                </td>
               </tr>
 
               {/* Laboratory Section */}
@@ -122,20 +162,26 @@ export default function ViewRecordPage() {
                 </td>
                 <td className="px-2 sm:px-4 py-2 border font-semibold">60%</td>
                 <td className="px-2 sm:px-4 py-2 border">Assignment 1</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.assignment1)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.assignment1)}
+                </td>
               </tr>
               <tr className="bg-gray-100">
                 <td className="px-2 sm:px-4 py-2 border font-semibold">60%</td>
                 <td className="px-2 sm:px-4 py-2 border">Activity 1</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.activity1)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.activity1)}
+                </td>
               </tr>
               <tr className="bg-gray-100">
                 <td className="px-2 sm:px-4 py-2 border font-semibold">40%</td>
                 <td className="px-2 sm:px-4 py-2 border">Midterm Lab Exam</td>
-                <td className="px-2 sm:px-4 py-2 border">{formatScore(studentData.midtermlabexam)}</td>
+                <td className="px-2 sm:px-4 py-2 border">
+                  {formatScore(studentData.midtermlabexam)}
+                </td>
               </tr>
 
-              {/* Total Midterm */}
+              {/* Midterm Grade */}
               <tr className="bg-blue-100 font-bold">
                 <td className="px-2 sm:px-4 py-2 border text-right" colSpan={3}>
                   Midterm Grade
@@ -148,7 +194,7 @@ export default function ViewRecordPage() {
           </table>
         </div>
 
-        {/* Button Section */}
+        {/* Back Button */}
         <div className="mt-6 flex justify-center">
           <button
             onClick={() => router.push("/")}
