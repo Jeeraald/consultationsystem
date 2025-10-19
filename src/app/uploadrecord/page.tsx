@@ -37,7 +37,7 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
-  // Auto-hide status after 2s
+  // Auto-hide status after 2 seconds
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -169,10 +169,10 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Helper: display "Missed" if value is -1
+  // ✅ Display "Missed" if value is -1
   const displayValue = (value: number | string) => {
     if (Number(value) === -1) {
-      return <span className="text-red-600 italic">Missed</span>;
+      return <span className="text-red-600 italic font-semibold">Missed</span>;
     }
     return value;
   };
@@ -272,7 +272,11 @@ export default function UploadRecord() {
                         {editingId === r.idNumber ? (
                           <input
                             type="text"
-                            value={String((editedRecord as any)[key] ?? value)}
+                            value={String(
+                              (editedRecord as Partial<StudentRecord>)[
+                                key as keyof StudentRecord
+                              ] ?? value
+                            )}
                             onChange={(e) =>
                               setEditedRecord({
                                 ...editedRecord,
