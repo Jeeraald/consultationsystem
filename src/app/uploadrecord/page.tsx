@@ -45,7 +45,7 @@ export default function UploadRecord() {
     }
   }, [status]);
 
-  // Load Firestore data safely
+  // ✅ Safe Firestore loading
   useEffect(() => {
     const classCollection = collection(db, "classrecord");
 
@@ -53,17 +53,17 @@ export default function UploadRecord() {
       const data: StudentRecord[] = snapshot.docs.map((d) => {
         const record = d.data() as Partial<StudentRecord>;
 
-        // ✅ Safely convert midtermGrade to number with two decimals
+        // ✅ Safely parse midtermGrade
         let grade = 0;
         if (record.midtermGrade !== undefined && record.midtermGrade !== null) {
           const parsed = parseFloat(String(record.midtermGrade));
-          grade = isNaN(parsed) ? 0 : parseFloat(parsed.toFixed(2));
+          grade = !isNaN(parsed) ? parseFloat(parsed.toFixed(2)) : 0;
         }
 
         return {
           idNumber: d.id,
-          firstName: record.firstName || "",
-          lastName: record.lastName || "",
+          firstName: String(record.firstName ?? ""),
+          lastName: String(record.lastName ?? ""),
           attendance: Number(record.attendance ?? 0),
           quiz1: Number(record.quiz1 ?? 0),
           quiz2: Number(record.quiz2 ?? 0),
@@ -83,7 +83,7 @@ export default function UploadRecord() {
     return () => unsubscribe();
   }, []);
 
-  // Handle Excel file upload
+  // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
@@ -124,8 +124,10 @@ export default function UploadRecord() {
 
           if (!idNumber || !firstName || !lastName) continue;
 
-          const midtermGradeRaw = Number(row[13]) || 0;
-          const midtermGrade = parseFloat(midtermGradeRaw.toFixed(2));
+          const rawGrade = parseFloat(String(row[13] ?? 0));
+          const midtermGrade = !isNaN(rawGrade)
+            ? parseFloat(rawGrade.toFixed(2))
+            : 0;
 
           const dataToSave: StudentRecord = {
             idNumber,
@@ -160,22 +162,21 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  // Handle edit
+  // Handle Edit
   const handleEdit = (record: StudentRecord) => {
     setEditingId(record.idNumber);
     setEditedRecord({ ...record });
   };
 
-  // Handle save changes
+  // Handle Save
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
-    // Ensure midtermGrade is formatted correctly
     if (editedRecord.midtermGrade !== undefined) {
       const parsed = parseFloat(String(editedRecord.midtermGrade));
-      editedRecord.midtermGrade = isNaN(parsed)
-        ? 0
-        : parseFloat(parsed.toFixed(2));
+      editedRecord.midtermGrade = !isNaN(parsed)
+        ? parseFloat(parsed.toFixed(2))
+        : 0;
     }
 
     try {
@@ -189,7 +190,7 @@ export default function UploadRecord() {
     }
   };
 
-  // Handle delete
+  // Handle Delete
   const handleDelete = async (record: StudentRecord) => {
     if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
       await deleteDoc(doc(db, "classrecord", record.idNumber));
@@ -206,14 +207,15 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Display "Missed" if -1, else show numbers with correct formatting
+  // ✅ Display Value (Safe)
   const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
     }
     if (key === "midtermGrade") {
       const parsed = parseFloat(String(value));
-      return <span className="text-black">{isNaN(parsed) ? "0.00" : parsed.toFixed(2)}</span>;
+      const safe = !isNaN(parsed) ? parsed.toFixed(2) : "0.00";
+      return <span className="text-black">{safe}</span>;
     }
     return <span className="text-black">{value}</span>;
   };
