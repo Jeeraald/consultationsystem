@@ -9,17 +9,11 @@ interface StudentData {
   lastName: string;
   attendance: number | string;
   activity1: number | string;
-  activity2?: number | string;
-  activity3?: number | string;
   assignment1: number | string;
-  assignment2?: number | string;
-  assignment3?: number | string;
-  assignment4?: number | string;
   quiz1: number | string;
   quiz2: number | string;
   quiz3: number | string;
   quiz4: number | string;
-  quiz5?: number | string;
   prelim: number | string;
   midtermwrittenexam: number | string;
   midtermlabexam: number | string;
@@ -33,38 +27,25 @@ export default function ViewRecordPage() {
   useEffect(() => {
     const record = sessionStorage.getItem("studentRecord");
     if (record) setStudentData(JSON.parse(record));
-    else router.push("/"); // redirect if no data
+    else router.push("/"); // redirect if no data found
   }, [router]);
 
   if (!studentData) return null;
 
-  const lectureWeight = 0.67;
-  const labWeight = 0.33;
-
-  // Robust formatScore:
-  // - treat number -1 or string "-1" as "Missed"
-  // - return numeric values as numbers
-  // - return empty string for null/undefined/empty
-  // - otherwise return the original value
+  // ✅ Show "Missed" if -1 (italic, red text only)
   const formatScore = (value: number | string | undefined) => {
     if (value === null || value === undefined || value === "") return "";
-    // try convert to number
     const num = Number(value);
     if (!Number.isNaN(num)) {
       if (num === -1) {
-        return (
-          <span className="text-red-600 italic">
-            Missed
-          </span>
-        );
+        return <span className="text-red-600 italic">Missed</span>;
       }
-      // for numeric values, show the number (no trailing .0 if integer)
       return Number.isInteger(num) ? num : Number(num.toFixed(2));
     }
-    // fallback: value is not numeric (string) — return it
     return value;
   };
 
+  // ✅ Color based on grade value
   const gradeNum = Number(studentData.midtermGrade);
   const gradeColor =
     !Number.isNaN(gradeNum) && gradeNum >= 3.25
@@ -76,117 +57,97 @@ export default function ViewRecordPage() {
   ).toUpperCase()}`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200 p-2 sm:p-4 md:p-6">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-4 sm:p-6 md:p-10">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-700 text-center mb-4">
-          Computer Programming 1 Midterm
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <div className="bg-white rounded-3xl shadow-lg w-full max-w-4xl p-6 border border-gray-200">
+        <h1 className="text-2xl md:text-3xl font-bold text-blue-700 text-center mb-6">
+          Computer Programming 1 - Midterm Record
         </h1>
 
         {/* Student Info */}
-        <div className="mb-6 text-gray-700 text-center text-sm sm:text-base">
+        <div className="mb-6 text-black text-center">
           <p className="font-semibold">
             Name: <span className="font-bold">{fullName}</span>
           </p>
           <p>ID Number: {studentData.idNumber}</p>
         </div>
 
-        {/* Table */}
+        {/* Record Table */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-sm sm:text-base">
+          <table className="w-full border-collapse text-left text-sm sm:text-base text-black">
             <thead>
-              <tr className="bg-blue-100 text-gray-800">
-                <th className="px-2 sm:px-4 py-2 border">Category</th>
-                <th className="px-2 sm:px-4 py-2 border">Weight</th>
-                <th className="px-2 sm:px-4 py-2 border">Component</th>
-                <th className="px-2 sm:px-4 py-2 border">Score</th>
+              <tr className="bg-blue-100 text-blue-900">
+                <th className="px-4 py-2 border">Category</th>
+                <th className="px-4 py-2 border">Weight</th>
+                <th className="px-4 py-2 border">Component</th>
+                <th className="px-4 py-2 border">Score</th>
               </tr>
             </thead>
             <tbody>
               {/* Lecture Section */}
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border font-semibold" rowSpan={7}>
-                  Lecture ({(lectureWeight * 100).toFixed(0)}%)
+              <tr>
+                <td className="px-4 py-2 border font-semibold" rowSpan={7}>
+                  Lecture (67%)
                 </td>
-                <td className="px-2 sm:px-4 py-2 border font-semibold">20%</td>
-                <td className="px-2 sm:px-4 py-2 border">Attendance</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.attendance)}
-                </td>
+                <td className="px-4 py-2 border font-semibold">20%</td>
+                <td className="px-4 py-2 border">Attendance</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.attendance)}</td>
               </tr>
 
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border font-semibold" rowSpan={5}>
+              <tr>
+                <td className="px-4 py-2 border font-semibold" rowSpan={5}>
                   40%
                 </td>
-                <td className="px-2 sm:px-4 py-2 border">Quiz 1</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.quiz1)}
-                </td>
+                <td className="px-4 py-2 border">Quiz 1</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.quiz1)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border">Quiz 2</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.quiz2)}
-                </td>
+              <tr>
+                <td className="px-4 py-2 border">Quiz 2</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.quiz2)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border">Quiz 3</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.quiz3)}
-                </td>
+              <tr>
+                <td className="px-4 py-2 border">Quiz 3</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.quiz3)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border">Quiz 4</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.quiz4)}
-                </td>
+              <tr>
+                <td className="px-4 py-2 border">Quiz 4</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.quiz4)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border">Prelim</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.prelim)}
-                </td>
+              <tr>
+                <td className="px-4 py-2 border">Prelim</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.prelim)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-2 sm:px-4 py-2 border font-semibold">40%</td>
-                <td className="px-2 sm:px-4 py-2 border">Midterm Exam</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.midtermwrittenexam)}
-                </td>
+              <tr>
+                <td className="px-4 py-2 border font-semibold">40%</td>
+                <td className="px-4 py-2 border">Midterm Exam</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.midtermwrittenexam)}</td>
               </tr>
 
               {/* Laboratory Section */}
-              <tr className="bg-gray-100">
-                <td className="px-2 sm:px-4 py-2 border font-semibold" rowSpan={3}>
-                  Laboratory ({(labWeight * 100).toFixed(0)}%)
+              <tr className="bg-gray-50">
+                <td className="px-4 py-2 border font-semibold" rowSpan={3}>
+                  Laboratory (33%)
                 </td>
-                <td className="px-2 sm:px-4 py-2 border font-semibold">60%</td>
-                <td className="px-2 sm:px-4 py-2 border">Assignment 1</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.assignment1)}
-                </td>
+                <td className="px-4 py-2 border font-semibold">30%</td>
+                <td className="px-4 py-2 border">Assignment 1</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.assignment1)}</td>
               </tr>
-              <tr className="bg-gray-100">
-                <td className="px-2 sm:px-4 py-2 border font-semibold">60%</td>
-                <td className="px-2 sm:px-4 py-2 border">Activity 1</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.activity1)}
-                </td>
+              <tr className="bg-gray-50">
+                <td className="px-4 py-2 border font-semibold">30%</td>
+                <td className="px-4 py-2 border">Activity 1</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.activity1)}</td>
               </tr>
-              <tr className="bg-gray-100">
-                <td className="px-2 sm:px-4 py-2 border font-semibold">40%</td>
-                <td className="px-2 sm:px-4 py-2 border">Midterm Lab Exam</td>
-                <td className="px-2 sm:px-4 py-2 border">
-                  {formatScore(studentData.midtermlabexam)}
-                </td>
+              <tr className="bg-gray-50">
+                <td className="px-4 py-2 border font-semibold">40%</td>
+                <td className="px-4 py-2 border">Midterm Lab Exam</td>
+                <td className="px-4 py-2 border">{formatScore(studentData.midtermlabexam)}</td>
               </tr>
 
               {/* Midterm Grade */}
               <tr className="bg-blue-100 font-bold">
-                <td className="px-2 sm:px-4 py-2 border text-right" colSpan={3}>
+                <td className="px-4 py-2 border text-right" colSpan={3}>
                   Midterm Grade
                 </td>
-                <td className={`px-2 sm:px-4 py-2 border text-left ${gradeColor}`}>
+                <td className={`px-4 py-2 border ${gradeColor}`}>
                   {formatScore(studentData.midtermGrade)}
                 </td>
               </tr>

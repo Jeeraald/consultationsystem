@@ -169,16 +169,16 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Helper: display "Missed" if value is -1
+  // ✅ Display "Missed" if value is -1
   const displayValue = (value: number | string) => {
     if (Number(value) === -1) {
-      return <span className="text-red-600 italic">Missed</span>;
+      return <span className="text-red-600 italic font-semibold">Missed</span>;
     }
-    return value;
+    return <span className="text-black">{value}</span>;
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-50 p-6">
+    <div className="min-h-screen flex flex-col items-center bg-white p-6">
       <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-7xl">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">
           Upload Class Record
@@ -190,14 +190,14 @@ export default function UploadRecord() {
             placeholder="Search by ID or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="p-2 border rounded w-full md:w-1/3"
+            className="p-2 border rounded w-full md:w-1/3 text-black"
           />
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
               accept=".xlsx, .xls"
               onChange={handleFileUpload}
-              className="flex-1 p-2 border rounded"
+              className="flex-1 p-2 border rounded text-black"
             />
             <button
               onClick={handleUpload}
@@ -229,7 +229,7 @@ export default function UploadRecord() {
 
         {filteredRecords.length > 0 ? (
           <div className="overflow-x-auto max-h-[70vh] border rounded-lg">
-            <table className="min-w-full text-sm border-collapse">
+            <table className="min-w-full text-sm border-collapse text-black">
               <thead className="bg-blue-100 text-blue-900 font-semibold sticky top-0 z-10">
                 <tr>
                   <th className="border px-3 py-2">ID Number</th>
@@ -268,7 +268,7 @@ export default function UploadRecord() {
                       midtermlabexam: r.midtermlabexam,
                       midtermGrade: r.midtermGrade,
                     }).map(([key, value]) => (
-                      <td key={key} className="border px-2 py-1">
+                      <td key={key} className="border px-2 py-1 text-black">
                         {editingId === r.idNumber ? (
                           <input
                             type="text"
@@ -279,7 +279,7 @@ export default function UploadRecord() {
                                 [key]: e.target.value,
                               })
                             }
-                            className="w-full border rounded px-1 text-center"
+                            className="w-full border rounded px-1 text-center text-black"
                           />
                         ) : (
                           displayValue(value)
