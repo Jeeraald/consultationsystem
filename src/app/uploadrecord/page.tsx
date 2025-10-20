@@ -48,19 +48,10 @@ export default function UploadRecord() {
   // Load Firestore data
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
-      const data: StudentRecord[] = snapshot.docs.map((d) => {
-        const record = d.data() as Omit<StudentRecord, "idNumber">;
-
-        // ✅ Automatically format midtermGrade to two decimals
-        return {
-          idNumber: d.id,
-          ...record,
-          midtermGrade:
-            typeof record.midtermGrade === "number"
-              ? parseFloat(record.midtermGrade.toFixed(2))
-              : 0,
-        };
-      });
+      const data: StudentRecord[] = snapshot.docs.map((d) => ({
+        idNumber: d.id,
+        ...(d.data() as Omit<StudentRecord, "idNumber">),
+      }));
       setRecords(data);
     });
     return () => unsubscribe();
@@ -107,10 +98,6 @@ export default function UploadRecord() {
 
           if (!idNumber || !firstName || !lastName) continue;
 
-          // ✅ Format midtermGrade to two decimals when uploading
-          const midtermGradeRaw = Number(row[13]) || 0;
-          const midtermGrade = parseFloat(midtermGradeRaw.toFixed(2));
-
           const dataToSave: StudentRecord = {
             idNumber,
             firstName,
@@ -125,7 +112,7 @@ export default function UploadRecord() {
             assignment1: Number(row[10]) || 0,
             activity1: Number(row[11]) || 0,
             midtermlabexam: Number(row[12]) || 0,
-            midtermGrade,
+            midtermGrade: Number(row[13]) || 0,
           };
 
           await setDoc(doc(classCollection, idNumber), dataToSave, { merge: true });
@@ -153,13 +140,6 @@ export default function UploadRecord() {
   // Save changes
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
-
-    // ✅ Ensure midtermGrade is stored with two decimal places
-    if (editedRecord.midtermGrade !== undefined) {
-      editedRecord.midtermGrade = parseFloat(
-        Number(editedRecord.midtermGrade).toFixed(2)
-      );
-    }
 
     try {
       await setDoc(doc(db, "classrecord", editingId), editedRecord, { merge: true });
@@ -190,16 +170,10 @@ export default function UploadRecord() {
   });
 
   // ✅ Display "Missed" if value is -1
-  const displayValue = (key: string, value: number | string) => {
+  const displayValue = (value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
     }
-
-    // ✅ Format midtermGrade to show two decimals always
-    if (key === "midtermGrade" && typeof value === "number") {
-      return <span className="text-black">{value.toFixed(2)}</span>;
-    }
-
     return <span className="text-black">{value}</span>;
   };
 
@@ -308,7 +282,7 @@ export default function UploadRecord() {
                             className="w-full border rounded px-1 text-center text-black"
                           />
                         ) : (
-                          displayValue(key, value)
+                          displayValue(value)
                         )}
                       </td>
                     ))}
