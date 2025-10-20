@@ -168,19 +168,28 @@ export default function UploadRecord() {
     setEditedRecord({ ...record });
   };
 
-  // Handle Save
+  // ✅ Handle Save (preserve type)
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
-    if (editedRecord.midtermGrade !== undefined) {
-      const parsed = parseFloat(String(editedRecord.midtermGrade));
-      editedRecord.midtermGrade = !isNaN(parsed)
-        ? parseFloat(parsed.toFixed(2))
-        : 0;
-    }
+    // changed type here to allow both number and string assignments
+    const cleanRecord: Partial<Record<keyof StudentRecord, number | string>> = {};
+
+    Object.entries(editedRecord).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+      // if original field was a number in Firestore, keep number type
+      const original = (records.find((r) => r.idNumber === editingId) as any)?.[key];
+      const k = key as keyof StudentRecord;
+      if (typeof original === "number") {
+        const num = parseFloat(String(value));
+        cleanRecord[k] = isNaN(num) ? 0 : num;
+      } else {
+        cleanRecord[k] = String(value);
+      }
+    });
 
     try {
-      await setDoc(doc(db, "classrecord", editingId), editedRecord, { merge: true });
+      await setDoc(doc(db, "classrecord", editingId), cleanRecord as any, { merge: true });
       setStatus("✅ Successfully saved!");
       setEditingId(null);
       setEditedRecord({});
@@ -316,12 +325,14 @@ export default function UploadRecord() {
                           <input
                             type="text"
                             value={String((editedRecord as any)[key] ?? value)}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const input = e.target.value;
+                              const isNum = !isNaN(parseFloat(input)) && input.trim() !== "";
                               setEditedRecord({
                                 ...editedRecord,
-                                [key]: e.target.value,
-                              })
-                            }
+                                [key]: isNum ? parseFloat(input) : input,
+                              });
+                            }}
                             className="w-full border rounded px-1 text-center text-black"
                           />
                         ) : (
