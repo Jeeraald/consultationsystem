@@ -37,6 +37,9 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
+  // list of fields that should remain strings in Firestore
+  const stringFields = ["idNumber", "firstName", "lastName"];
+
   // Auto-hide status after 2 seconds
   useEffect(() => {
     if (status) {
@@ -168,28 +171,41 @@ export default function UploadRecord() {
     setEditedRecord({ ...record });
   };
 
-  // ✅ Handle Save (preserve type)
+  // Handle Save — build correctly-typed payload
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
-    // changed type here to allow both number and string assignments
-    const cleanRecord: Partial<Record<keyof StudentRecord, number | string>> = {};
+    // flexible map that can hold numbers or strings
+    const flexible: Partial<Record<keyof StudentRecord, number | string>> = {};
 
-    Object.entries(editedRecord).forEach(([key, value]) => {
-      if (value === null || value === undefined) return;
-      // if original field was a number in Firestore, keep number type
-      const original = (records.find((r) => r.idNumber === editingId) as any)?.[key];
-      const k = key as keyof StudentRecord;
-      if (typeof original === "number") {
-        const num = parseFloat(String(value));
-        cleanRecord[k] = isNaN(num) ? 0 : num;
+    Object.entries(editedRecord).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+      const key = k as keyof StudentRecord;
+      if (stringFields.includes(k)) {
+        flexible[key] = String(v);
       } else {
-        cleanRecord[k] = String(value);
+        const num = parseFloat(String(v));
+        flexible[key] = isNaN(num) ? 0 : num;
       }
     });
 
+    // build final payload typed as Partial<StudentRecord>
+    const payload = Object.fromEntries(
+      Object.entries(flexible).map(([k, v]) => {
+        if (stringFields.includes(k)) {
+          return [k, String(v)];
+        }
+        return [k, Number(v)];
+      })
+    ) as Partial<StudentRecord>;
+
+    // ensure midtermGrade has 2 decimals if present
+    if (payload.midtermGrade !== undefined) {
+      payload.midtermGrade = parseFloat(Number(payload.midtermGrade).toFixed(2));
+    }
+
     try {
-      await setDoc(doc(db, "classrecord", editingId), cleanRecord as any, { merge: true });
+      await setDoc(doc(db, "classrecord", editingId), payload, { merge: true });
       setStatus("✅ Successfully saved!");
       setEditingId(null);
       setEditedRecord({});
@@ -323,15 +339,23 @@ export default function UploadRecord() {
                       <td key={key} className="border px-2 py-1 text-black">
                         {editingId === r.idNumber ? (
                           <input
-                            type="text"
+                            type={stringFields.includes(key) ? "text" : "number"}
                             value={String((editedRecord as any)[key] ?? value)}
                             onChange={(e) => {
                               const input = e.target.value;
-                              const isNum = !isNaN(parseFloat(input)) && input.trim() !== "";
-                              setEditedRecord({
-                                ...editedRecord,
-                                [key]: isNum ? parseFloat(input) : input,
-                              });
+                              if (stringFields.includes(key)) {
+                                setEditedRecord({
+                                  ...editedRecord,
+                                  [key]: input,
+                                });
+                              } else {
+                                // store numeric fields as numbers in editedRecord
+                                const num = parseFloat(input);
+                                setEditedRecord({
+                                  ...editedRecord,
+                                  [key]: isNaN(num) ? 0 : num,
+                                });
+                              }
                             }}
                             className="w-full border rounded px-1 text-center text-black"
                           />
