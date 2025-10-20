@@ -104,6 +104,7 @@ export default function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+    // intentionally keeping placeholders, texts, focused, cleared in deps to keep animation responsive
   }, [focused, cleared, placeholders, texts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,7 +116,7 @@ export default function HomePage() {
       let found = false;
 
       querySnapshot.forEach((doc) => {
-        const data = doc.data() as StudentData;
+        const data = doc.data() as Partial<StudentData>;
         const dbFirst = (data.firstName || "").trim().toLowerCase();
         const dbLast = (data.lastName || "").trim().toLowerCase();
         const dbId = String(data.idNumber || "").trim();
@@ -126,11 +127,44 @@ export default function HomePage() {
           dbId === idNumber.trim()
         ) {
           found = true;
-          sessionStorage.setItem("studentRecord", JSON.stringify(data));
-          localStorage.setItem("idNumber", dbId);
-          setStudentData(data);
 
-          if (data.midtermGrade <= 3.0) {
+          // Normalize numeric fields to real numbers to avoid .toFixed() errors
+          const normalizeNumber = (val: unknown, fallback = 0) => {
+            if (val === undefined || val === null || val === "") return fallback;
+            const n = Number(val);
+            return Number.isNaN(n) ? fallback : n;
+          };
+
+          const normalized: StudentData = {
+            firstName: String(data.firstName || ""),
+            lastName: String(data.lastName || ""),
+            idNumber: String(data.idNumber || dbId),
+            attendance: normalizeNumber(data.attendance),
+            activity1: normalizeNumber(data.activity1),
+            activity2: normalizeNumber(data.activity2),
+            activity3: normalizeNumber(data.activity3),
+            assignment1: normalizeNumber(data.assignment1),
+            assignment2: normalizeNumber(data.assignment2),
+            assignment3: normalizeNumber(data.assignment3),
+            assignment4: normalizeNumber(data.assignment4),
+            quiz1: normalizeNumber(data.quiz1),
+            quiz2: normalizeNumber(data.quiz2),
+            quiz3: normalizeNumber(data.quiz3),
+            quiz4: normalizeNumber(data.quiz4),
+            quiz5: normalizeNumber(data.quiz5),
+            prelim: normalizeNumber(data.prelim),
+            midtermwrittenexam: normalizeNumber(data.midtermwrittenexam),
+            midtermlabexam: normalizeNumber(data.midtermlabexam),
+            midtermGrade: normalizeNumber(data.midtermGrade),
+          };
+
+          // Save normalized object
+          sessionStorage.setItem("studentRecord", JSON.stringify(normalized));
+          localStorage.setItem("idNumber", normalized.idNumber);
+          setStudentData(normalized);
+
+          // Use numeric comparison (normalized.midtermGrade is guaranteed number)
+          if (normalized.midtermGrade <= 3.0) {
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 5000);
           }

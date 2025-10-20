@@ -37,7 +37,7 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
-  // Auto-hide status after 2s
+  // Auto-hide status after 2 seconds
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -45,26 +45,52 @@ export default function UploadRecord() {
     }
   }, [status]);
 
-  // Load Firestore data
+  // Load Firestore data safely
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "classrecord"), (snapshot) => {
-      const data: StudentRecord[] = snapshot.docs.map((d) => ({
-        idNumber: d.id,
-        ...(d.data() as Omit<StudentRecord, "idNumber">),
-      }));
+    const classCollection = collection(db, "classrecord");
+
+    const unsubscribe = onSnapshot(classCollection, (snapshot) => {
+      const data: StudentRecord[] = snapshot.docs.map((d) => {
+        const record = d.data() as Partial<StudentRecord>;
+
+        // ✅ Safely convert midtermGrade to number with two decimals
+        let grade = 0;
+        if (record.midtermGrade !== undefined && record.midtermGrade !== null) {
+          const parsed = parseFloat(String(record.midtermGrade));
+          grade = isNaN(parsed) ? 0 : parseFloat(parsed.toFixed(2));
+        }
+
+        return {
+          idNumber: d.id,
+          firstName: record.firstName || "",
+          lastName: record.lastName || "",
+          attendance: Number(record.attendance ?? 0),
+          quiz1: Number(record.quiz1 ?? 0),
+          quiz2: Number(record.quiz2 ?? 0),
+          quiz3: Number(record.quiz3 ?? 0),
+          quiz4: Number(record.quiz4 ?? 0),
+          prelim: Number(record.prelim ?? 0),
+          midtermwrittenexam: Number(record.midtermwrittenexam ?? 0),
+          assignment1: Number(record.assignment1 ?? 0),
+          activity1: Number(record.activity1 ?? 0),
+          midtermlabexam: Number(record.midtermlabexam ?? 0),
+          midtermGrade: grade,
+        } as StudentRecord;
+      });
       setRecords(data);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // File upload handler
+  // Handle Excel file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
     setFile(uploadedFile);
   };
 
-  // Upload Excel to Firestore
+  // Upload Excel data to Firestore
   const handleUpload = async () => {
     if (!file) {
       alert("Please select an Excel file first.");
@@ -98,6 +124,9 @@ export default function UploadRecord() {
 
           if (!idNumber || !firstName || !lastName) continue;
 
+          const midtermGradeRaw = Number(row[13]) || 0;
+          const midtermGrade = parseFloat(midtermGradeRaw.toFixed(2));
+
           const dataToSave: StudentRecord = {
             idNumber,
             firstName,
@@ -112,7 +141,7 @@ export default function UploadRecord() {
             assignment1: Number(row[10]) || 0,
             activity1: Number(row[11]) || 0,
             midtermlabexam: Number(row[12]) || 0,
-            midtermGrade: Number(row[13]) || 0,
+            midtermGrade,
           };
 
           await setDoc(doc(classCollection, idNumber), dataToSave, { merge: true });
@@ -131,15 +160,23 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  // Edit handler
+  // Handle edit
   const handleEdit = (record: StudentRecord) => {
     setEditingId(record.idNumber);
     setEditedRecord({ ...record });
   };
 
-  // Save changes
+  // Handle save changes
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
+
+    // Ensure midtermGrade is formatted correctly
+    if (editedRecord.midtermGrade !== undefined) {
+      const parsed = parseFloat(String(editedRecord.midtermGrade));
+      editedRecord.midtermGrade = isNaN(parsed)
+        ? 0
+        : parseFloat(parsed.toFixed(2));
+    }
 
     try {
       await setDoc(doc(db, "classrecord", editingId), editedRecord, { merge: true });
@@ -152,7 +189,7 @@ export default function UploadRecord() {
     }
   };
 
-  // Delete record
+  // Handle delete
   const handleDelete = async (record: StudentRecord) => {
     if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
       await deleteDoc(doc(db, "classrecord", record.idNumber));
@@ -169,10 +206,14 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Display "Missed" if value is -1
-  const displayValue = (value: number | string) => {
+  // ✅ Display "Missed" if -1, else show numbers with correct formatting
+  const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
+    }
+    if (key === "midtermGrade") {
+      const parsed = parseFloat(String(value));
+      return <span className="text-black">{isNaN(parsed) ? "0.00" : parsed.toFixed(2)}</span>;
     }
     return <span className="text-black">{value}</span>;
   };
@@ -282,7 +323,7 @@ export default function UploadRecord() {
                             className="w-full border rounded px-1 text-center text-black"
                           />
                         ) : (
-                          displayValue(value)
+                          displayValue(key, value)
                         )}
                       </td>
                     ))}

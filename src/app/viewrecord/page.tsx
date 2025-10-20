@@ -27,12 +27,12 @@ export default function ViewRecordPage() {
   useEffect(() => {
     const record = sessionStorage.getItem("studentRecord");
     if (record) setStudentData(JSON.parse(record));
-    else router.push("/"); // redirect if no data found
+    else router.push("/");
   }, [router]);
 
   if (!studentData) return null;
 
-  // ✅ Show "Missed" if -1 (italic, red text only)
+  // ✅ For other scores (keep original format)
   const formatScore = (value: number | string | undefined) => {
     if (value === null || value === undefined || value === "") return "";
     const num = Number(value);
@@ -40,9 +40,16 @@ export default function ViewRecordPage() {
       if (num === -1) {
         return <span className="text-red-600 italic">Missed</span>;
       }
-      return Number.isInteger(num) ? num : Number(num.toFixed(2));
+      return num; // ← no 2 decimals for regular scores
     }
     return value;
+  };
+
+  // ✅ For midtermGrade only (always 2 decimals)
+  const formatMidtermGrade = (value: number | string) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return value;
+    return num.toFixed(2);
   };
 
   // ✅ Color based on grade value
@@ -142,13 +149,13 @@ export default function ViewRecordPage() {
                 <td className="px-4 py-2 border">{formatScore(studentData.midtermlabexam)}</td>
               </tr>
 
-              {/* Midterm Grade */}
+              {/* Midterm Grade (2 decimals only here) */}
               <tr className="bg-blue-100 font-bold">
                 <td className="px-4 py-2 border text-right" colSpan={3}>
                   Midterm Grade
                 </td>
                 <td className={`px-4 py-2 border ${gradeColor}`}>
-                  {formatScore(studentData.midtermGrade)}
+                  {formatMidtermGrade(studentData.midtermGrade)}
                 </td>
               </tr>
             </tbody>
