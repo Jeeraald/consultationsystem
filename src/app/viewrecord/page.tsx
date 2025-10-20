@@ -24,10 +24,38 @@ export default function ViewRecordPage() {
   const router = useRouter();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
 
+  // ✅ Normalize numeric fields from sessionStorage
+  const normalizeNumber = (val: unknown, fallback = 0) => {
+    if (val === undefined || val === null || val === "") return fallback;
+    const n = Number(val);
+    return Number.isNaN(n) ? fallback : n;
+  };
+
   useEffect(() => {
     const record = sessionStorage.getItem("studentRecord");
-    if (record) setStudentData(JSON.parse(record));
-    else router.push("/");
+    if (record) {
+      const parsed = JSON.parse(record);
+
+      // Normalize all numeric values like in HomePage
+      const normalized = {
+        ...parsed,
+        attendance: normalizeNumber(parsed.attendance),
+        activity1: normalizeNumber(parsed.activity1),
+        assignment1: normalizeNumber(parsed.assignment1),
+        quiz1: normalizeNumber(parsed.quiz1),
+        quiz2: normalizeNumber(parsed.quiz2),
+        quiz3: normalizeNumber(parsed.quiz3),
+        quiz4: normalizeNumber(parsed.quiz4),
+        prelim: normalizeNumber(parsed.prelim),
+        midtermwrittenexam: normalizeNumber(parsed.midtermwrittenexam),
+        midtermlabexam: normalizeNumber(parsed.midtermlabexam),
+        midtermGrade: normalizeNumber(parsed.midtermGrade),
+      };
+
+      setStudentData(normalized);
+    } else {
+      router.push("/");
+    }
   }, [router]);
 
   if (!studentData) return null;
@@ -40,7 +68,7 @@ export default function ViewRecordPage() {
       if (num === -1) {
         return <span className="text-red-600 italic">Missed</span>;
       }
-      return num; // ← no 2 decimals for regular scores
+      return num; // no 2 decimals for regular scores
     }
     return value;
   };
@@ -48,7 +76,7 @@ export default function ViewRecordPage() {
   // ✅ For midtermGrade only (always 2 decimals)
   const formatMidtermGrade = (value: number | string) => {
     const num = Number(value);
-    if (Number.isNaN(num)) return value;
+    if (Number.isNaN(num)) return "0.00";
     return num.toFixed(2);
   };
 
@@ -149,7 +177,7 @@ export default function ViewRecordPage() {
                 <td className="px-4 py-2 border">{formatScore(studentData.midtermlabexam)}</td>
               </tr>
 
-              {/* Midterm Grade (2 decimals only here) */}
+              {/* Midterm Grade */}
               <tr className="bg-blue-100 font-bold">
                 <td className="px-4 py-2 border text-right" colSpan={3}>
                   Midterm Grade
