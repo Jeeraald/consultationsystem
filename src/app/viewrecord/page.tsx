@@ -24,7 +24,7 @@ export default function ViewRecordPage() {
   const router = useRouter();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
 
-  // ✅ Normalize numeric fields from sessionStorage
+  // ✅ Normalize numeric fields
   const normalizeNumber = (val: unknown, fallback = 0) => {
     if (val === undefined || val === null || val === "") return fallback;
     const n = Number(val);
@@ -35,8 +35,6 @@ export default function ViewRecordPage() {
     const record = sessionStorage.getItem("studentRecord");
     if (record) {
       const parsed = JSON.parse(record);
-
-      // Normalize all numeric values like in HomePage
       const normalized = {
         ...parsed,
         attendance: normalizeNumber(parsed.attendance),
@@ -51,7 +49,6 @@ export default function ViewRecordPage() {
         midtermlabexam: normalizeNumber(parsed.midtermlabexam),
         midtermGrade: normalizeNumber(parsed.midtermGrade),
       };
-
       setStudentData(normalized);
     } else {
       router.push("/");
@@ -60,7 +57,7 @@ export default function ViewRecordPage() {
 
   if (!studentData) return null;
 
-  // ✅ For other scores (keep original format)
+  // ✅ Format regular scores
   const formatScore = (value: number | string | undefined) => {
     if (value === null || value === undefined || value === "") return "";
     const num = Number(value);
@@ -68,19 +65,19 @@ export default function ViewRecordPage() {
       if (num === -1) {
         return <span className="text-red-600 italic">Missed</span>;
       }
-      return num; // no 2 decimals for regular scores
+      return num;
     }
     return value;
   };
 
-  // ✅ For midtermGrade only (always 2 decimals)
+  // ✅ Format midterm grade (safe)
   const formatMidtermGrade = (value: number | string) => {
     const num = Number(value);
     if (Number.isNaN(num)) return "0.00";
     return num.toFixed(2);
   };
 
-  // ✅ Color based on grade value
+  // ✅ Grade color
   const gradeNum = Number(studentData.midtermGrade);
   const gradeColor =
     !Number.isNaN(gradeNum) && gradeNum >= 3.25

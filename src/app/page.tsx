@@ -215,7 +215,7 @@ export default function HomePage() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-blue-700">
                 Grade Consultation
               </h1>
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-700 mt-1">
                 Please enter your details to access your record
               </p>
             </div>
@@ -313,7 +313,7 @@ export default function HomePage() {
 
               <button
                 onClick={handleBack}
-                className="block mx-auto mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-gray-500 underline hover:text-blue-600"
+                className="block mx-auto mt-4 text-sm sm:text-base md:text-lg lg:text-xl text-gray-700 underline hover:text-blue-600"
               >
                 Back to Login
               </button>

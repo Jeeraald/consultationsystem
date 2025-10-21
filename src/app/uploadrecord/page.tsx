@@ -37,10 +37,8 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
-  // list of fields that should remain strings in Firestore
   const stringFields = ["idNumber", "firstName", "lastName"];
 
-  // Auto-hide status after 2 seconds
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -48,15 +46,11 @@ export default function UploadRecord() {
     }
   }, [status]);
 
-  // ✅ Safe Firestore loading
   useEffect(() => {
     const classCollection = collection(db, "classrecord");
-
     const unsubscribe = onSnapshot(classCollection, (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => {
         const record = d.data() as Partial<StudentRecord>;
-
-        // ✅ Safely parse midtermGrade
         let grade = 0;
         if (record.midtermGrade !== undefined && record.midtermGrade !== null) {
           const parsed = parseFloat(String(record.midtermGrade));
@@ -86,14 +80,12 @@ export default function UploadRecord() {
     return () => unsubscribe();
   }, []);
 
-  // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
     setFile(uploadedFile);
   };
 
-  // Upload Excel data to Firestore
   const handleUpload = async () => {
     if (!file) {
       alert("Please select an Excel file first.");
@@ -165,31 +157,28 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  // Handle Edit
   const handleEdit = (record: StudentRecord) => {
     setEditingId(record.idNumber);
     setEditedRecord({ ...record });
   };
 
-  // Handle Save — build correctly-typed payload
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
-    // flexible map that can hold numbers or strings
     const flexible: Partial<Record<keyof StudentRecord, number | string>> = {};
 
     Object.entries(editedRecord).forEach(([k, v]) => {
       if (v === undefined || v === null) return;
       const key = k as keyof StudentRecord;
+
       if (stringFields.includes(k)) {
         flexible[key] = String(v);
       } else {
-        const num = parseFloat(String(v));
+        const num = Number(v);
         flexible[key] = isNaN(num) ? 0 : num;
       }
     });
 
-    // build final payload typed as Partial<StudentRecord>
     const payload = Object.fromEntries(
       Object.entries(flexible).map(([k, v]) => {
         if (stringFields.includes(k)) {
@@ -199,7 +188,6 @@ export default function UploadRecord() {
       })
     ) as Partial<StudentRecord>;
 
-    // ensure midtermGrade has 2 decimals if present
     if (payload.midtermGrade !== undefined) {
       payload.midtermGrade = parseFloat(Number(payload.midtermGrade).toFixed(2));
     }
@@ -215,7 +203,6 @@ export default function UploadRecord() {
     }
   };
 
-  // Handle Delete
   const handleDelete = async (record: StudentRecord) => {
     if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
       await deleteDoc(doc(db, "classrecord", record.idNumber));
@@ -232,7 +219,6 @@ export default function UploadRecord() {
     );
   });
 
-  // ✅ Display Value (Safe)
   const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
@@ -247,7 +233,7 @@ export default function UploadRecord() {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-white p-6">
-      <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-7xl">
+      <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-7xl border border-black">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">
           Upload Class Record
         </h1>
@@ -258,21 +244,21 @@ export default function UploadRecord() {
             placeholder="Search by ID or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="p-2 border rounded w-full md:w-1/3 text-black"
+            className="p-2 border border-black rounded w-full md:w-1/3 text-black"
           />
           <div className="flex gap-3 w-full md:w-auto">
             <input
               type="file"
               accept=".xlsx, .xls"
               onChange={handleFileUpload}
-              className="flex-1 p-2 border rounded text-black"
+              className="flex-1 p-2 border border-black rounded text-black"
             />
             <button
               onClick={handleUpload}
               disabled={isUploading}
               className={`px-6 py-2 rounded text-white font-semibold ${
                 isUploading
-                  ? "bg-gray-400 cursor-not-allowed"
+                  ? "bg-black cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
@@ -296,30 +282,30 @@ export default function UploadRecord() {
         )}
 
         {filteredRecords.length > 0 ? (
-          <div className="overflow-x-auto max-h-[70vh] border rounded-lg">
+          <div className="overflow-x-auto max-h-[70vh] border border-black rounded-lg">
             <table className="min-w-full text-sm border-collapse text-black">
               <thead className="bg-blue-100 text-blue-900 font-semibold sticky top-0 z-10">
                 <tr>
-                  <th className="border px-3 py-2">ID Number</th>
-                  <th className="border px-3 py-2">Last Name</th>
-                  <th className="border px-3 py-2">First Name</th>
-                  <th className="border px-3 py-2">Attendance</th>
-                  <th className="border px-3 py-2">Quiz 1</th>
-                  <th className="border px-3 py-2">Quiz 2</th>
-                  <th className="border px-3 py-2">Quiz 3</th>
-                  <th className="border px-3 py-2">Quiz 4</th>
-                  <th className="border px-3 py-2">Prelim</th>
-                  <th className="border px-3 py-2">Midterm Written</th>
-                  <th className="border px-3 py-2">Assignment 1</th>
-                  <th className="border px-3 py-2">Activity 1</th>
-                  <th className="border px-3 py-2">Midterm Lab</th>
-                  <th className="border px-3 py-2">Midterm Grade</th>
-                  <th className="border px-3 py-2">Actions</th>
+                  <th className="border border-black px-3 py-2">ID Number</th>
+                  <th className="border border-black px-3 py-2">Last Name</th>
+                  <th className="border border-black px-3 py-2">First Name</th>
+                  <th className="border border-black px-3 py-2">Attendance</th>
+                  <th className="border border-black px-3 py-2">Quiz 1</th>
+                  <th className="border border-black px-3 py-2">Quiz 2</th>
+                  <th className="border border-black px-3 py-2">Quiz 3</th>
+                  <th className="border border-black px-3 py-2">Quiz 4</th>
+                  <th className="border border-black px-3 py-2">Prelim</th>
+                  <th className="border border-black px-3 py-2">Midterm Written</th>
+                  <th className="border border-black px-3 py-2">Assignment 1</th>
+                  <th className="border border-black px-3 py-2">Activity 1</th>
+                  <th className="border border-black px-3 py-2">Midterm Lab</th>
+                  <th className="border border-black px-3 py-2">Midterm Grade</th>
+                  <th className="border border-black px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((r) => (
-                  <tr key={r.idNumber} className="text-center border-t">
+                  <tr key={r.idNumber} className="text-center border-t border-black">
                     {Object.entries({
                       idNumber: r.idNumber,
                       lastName: r.lastName,
@@ -336,28 +322,23 @@ export default function UploadRecord() {
                       midtermlabexam: r.midtermlabexam,
                       midtermGrade: r.midtermGrade,
                     }).map(([key, value]) => (
-                      <td key={key} className="border px-2 py-1 text-black">
+                      <td key={key} className="border border-black px-2 py-1 text-black">
                         {editingId === r.idNumber ? (
                           <input
                             type={stringFields.includes(key) ? "text" : "number"}
                             value={String((editedRecord as any)[key] ?? value)}
                             onChange={(e) => {
                               const input = e.target.value;
-                              if (stringFields.includes(key)) {
-                                setEditedRecord({
-                                  ...editedRecord,
-                                  [key]: input,
-                                });
-                              } else {
-                                // store numeric fields as numbers in editedRecord
-                                const num = parseFloat(input);
-                                setEditedRecord({
-                                  ...editedRecord,
-                                  [key]: isNaN(num) ? 0 : num,
-                                });
-                              }
+                              setEditedRecord((prev) => ({
+                                ...prev,
+                                [key]: stringFields.includes(key)
+                                  ? input
+                                  : input === "" || isNaN(Number(input))
+                                  ? 0
+                                  : Number(input),
+                              }));
                             }}
-                            className="w-full border rounded px-1 text-center text-black"
+                            className="w-full border border-black rounded px-1 text-center text-black"
                           />
                         ) : (
                           displayValue(key, value)
@@ -365,7 +346,7 @@ export default function UploadRecord() {
                       </td>
                     ))}
 
-                    <td className="border px-3 py-1 flex gap-2 justify-center">
+                    <td className="border border-black px-3 py-1 flex gap-2 justify-center">
                       {editingId === r.idNumber ? (
                         <button
                           onClick={handleSave}
@@ -394,7 +375,7 @@ export default function UploadRecord() {
             </table>
           </div>
         ) : (
-          <p className="text-center text-gray-500 italic">No records found.</p>
+          <p className="text-center text-black italic">No records found.</p>
         )}
       </div>
     </div>
