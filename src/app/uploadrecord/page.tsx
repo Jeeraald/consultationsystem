@@ -37,9 +37,26 @@ export default function UploadRecord() {
   const [editedRecord, setEditedRecord] = useState<Partial<StudentRecord>>({});
   const [search, setSearch] = useState("");
 
-  const stringFields = ["idNumber", "firstName", "lastName"];
+  // fields that must remain strings in Firestore
+  const stringFields = ["idNumber", "firstName", "lastName"] as const;
+  type StringField = typeof stringFields[number];
 
-  // Auto-clear status message
+  // list of numeric fields (derived from StudentRecord keys minus string ones)
+  const numericFields: (keyof StudentRecord)[] = [
+    "attendance",
+    "activity1",
+    "assignment1",
+    "quiz1",
+    "quiz2",
+    "quiz3",
+    "quiz4",
+    "prelim",
+    "midtermwrittenexam",
+    "midtermlabexam",
+    "midtermGrade",
+  ];
+
+  // Auto-hide status after 2 seconds
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -47,56 +64,60 @@ export default function UploadRecord() {
     }
   }, [status]);
 
-  // Firestore live sync
+  // Load Firestore data safely and normalize types
   useEffect(() => {
     const classCollection = collection(db, "classrecord");
+
     const unsubscribe = onSnapshot(classCollection, (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => {
         const record = d.data() as Partial<StudentRecord>;
 
-        // Normalize all numeric fields to numbers
-        Object.keys(record).forEach((k) => {
-          if (!stringFields.includes(k)) {
-            (record as any)[k] = Number((record as any)[k]) || 0;
-          }
+        // Ensure numeric fields are numbers even if stored as strings in Firestore
+        const normalized: Partial<StudentRecord> = { ...record } as Partial<StudentRecord>;
+        numericFields.forEach((k) => {
+          const raw = (record as any)[k];
+          const num = Number(raw);
+          (normalized as any)[k] = Number.isNaN(num) ? 0 : num;
         });
 
-        const grade =
-          record.midtermGrade !== undefined && record.midtermGrade !== null
-            ? Number(record.midtermGrade)
-            : 0;
+        // midtermGrade should be 2 decimal number
+        const midtermRaw = (normalized as any).midtermGrade ?? 0;
+        const parsedMid = Number(midtermRaw);
+        const midtermGrade =
+          !Number.isNaN(parsedMid) ? parseFloat(parsedMid.toFixed(2)) : 0;
 
         return {
           idNumber: d.id,
-          firstName: String(record.firstName ?? ""),
-          lastName: String(record.lastName ?? ""),
-          attendance: Number(record.attendance ?? 0),
-          quiz1: Number(record.quiz1 ?? 0),
-          quiz2: Number(record.quiz2 ?? 0),
-          quiz3: Number(record.quiz3 ?? 0),
-          quiz4: Number(record.quiz4 ?? 0),
-          prelim: Number(record.prelim ?? 0),
-          midtermwrittenexam: Number(record.midtermwrittenexam ?? 0),
-          assignment1: Number(record.assignment1 ?? 0),
-          activity1: Number(record.activity1 ?? 0),
-          midtermlabexam: Number(record.midtermlabexam ?? 0),
-          midtermGrade: grade,
+          firstName: String(normalized.firstName ?? ""),
+          lastName: String(normalized.lastName ?? ""),
+          attendance: Number(normalized.attendance ?? 0),
+          quiz1: Number(normalized.quiz1 ?? 0),
+          quiz2: Number(normalized.quiz2 ?? 0),
+          quiz3: Number(normalized.quiz3 ?? 0),
+          quiz4: Number(normalized.quiz4 ?? 0),
+          prelim: Number(normalized.prelim ?? 0),
+          midtermwrittenexam: Number(normalized.midtermwrittenexam ?? 0),
+          assignment1: Number(normalized.assignment1 ?? 0),
+          activity1: Number(normalized.activity1 ?? 0),
+          midtermlabexam: Number(normalized.midtermlabexam ?? 0),
+          midtermGrade,
         } as StudentRecord;
       });
       setRecords(data);
     });
 
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // File selection
+  // Handle Excel file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
     setFile(uploadedFile);
   };
 
-  // Excel upload handler
+  // Upload Excel data to Firestore
   const handleUpload = async () => {
     if (!file) {
       alert("Please select an Excel file first.");
@@ -168,37 +189,52 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
-  // Edit button
+  // Handle edit
   const handleEdit = (record: StudentRecord) => {
     setEditingId(record.idNumber);
+    // put original typed values into editedRecord (numbers remain numbers)
     setEditedRecord({ ...record });
   };
 
-  // Save edited record
+  // Handle save changes (ensures types remain correct)
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
+    // flexible map that allows number | string so assignment is safe in TS
     const flexible: Partial<Record<keyof StudentRecord, number | string>> = {};
 
     Object.entries(editedRecord).forEach(([k, v]) => {
       if (v === undefined || v === null) return;
       const key = k as keyof StudentRecord;
 
-      if (stringFields.includes(k)) {
+      // keep string fields as strings
+      if ((stringFields as readonly string[]).includes(k)) {
         flexible[key] = String(v);
       } else {
-        const num = typeof v === "number" ? v : Number(v);
-        flexible[key] = isNaN(num) ? 0 : num;
+        // numeric fields: if already a number, keep it; if string, try parseFloat
+        const asNum = typeof v === "number" ? v : Number(v);
+        flexible[key] = Number.isNaN(asNum) ? 0 : asNum;
       }
     });
 
-    // Force midtermGrade to number type
-    if (flexible.midtermGrade !== undefined) {
-      flexible.midtermGrade = Number(flexible.midtermGrade);
+    // Now convert flexible -> payload typed as Partial<StudentRecord>
+    const payloadEntries = Object.entries(flexible).map(([k, v]) => {
+      if ((stringFields as readonly string[]).includes(k)) {
+        return [k, String(v)];
+      } else {
+        return [k, Number(v)];
+      }
+    });
+
+    const payload = Object.fromEntries(payloadEntries) as Partial<StudentRecord>;
+
+    // Ensure midtermGrade has 2 decimals (and is a number)
+    if (payload.midtermGrade !== undefined) {
+      payload.midtermGrade = parseFloat(Number(payload.midtermGrade).toFixed(2));
     }
 
     try {
-      await setDoc(doc(db, "classrecord", editingId), flexible, { merge: true });
+      await setDoc(doc(db, "classrecord", editingId), payload, { merge: true });
       setStatus("✅ Successfully saved!");
       setEditingId(null);
       setEditedRecord({});
@@ -208,7 +244,7 @@ export default function UploadRecord() {
     }
   };
 
-  // Delete record
+  // Handle delete
   const handleDelete = async (record: StudentRecord) => {
     if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
       await deleteDoc(doc(db, "classrecord", record.idNumber));
@@ -216,7 +252,6 @@ export default function UploadRecord() {
     }
   };
 
-  // Search filter
   const filteredRecords = records.filter((r) => {
     const q = search.toLowerCase();
     return (
@@ -226,7 +261,7 @@ export default function UploadRecord() {
     );
   });
 
-  // Display helper
+  // Display
   const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
@@ -294,27 +329,21 @@ export default function UploadRecord() {
             <table className="min-w-full text-sm border-collapse text-black">
               <thead className="bg-blue-100 text-blue-900 font-semibold sticky top-0 z-10">
                 <tr>
-                  {[
-                    "ID Number",
-                    "Last Name",
-                    "First Name",
-                    "Attendance",
-                    "Quiz 1",
-                    "Quiz 2",
-                    "Quiz 3",
-                    "Quiz 4",
-                    "Prelim",
-                    "Midterm Written",
-                    "Assignment 1",
-                    "Activity 1",
-                    "Midterm Lab",
-                    "Midterm Grade",
-                    "Actions",
-                  ].map((h) => (
-                    <th key={h} className="border border-black px-3 py-2">
-                      {h}
-                    </th>
-                  ))}
+                  <th className="border border-black px-3 py-2">ID Number</th>
+                  <th className="border border-black px-3 py-2">Last Name</th>
+                  <th className="border border-black px-3 py-2">First Name</th>
+                  <th className="border border-black px-3 py-2">Attendance</th>
+                  <th className="border border-black px-3 py-2">Quiz 1</th>
+                  <th className="border border-black px-3 py-2">Quiz 2</th>
+                  <th className="border border-black px-3 py-2">Quiz 3</th>
+                  <th className="border border-black px-3 py-2">Quiz 4</th>
+                  <th className="border border-black px-3 py-2">Prelim</th>
+                  <th className="border border-black px-3 py-2">Midterm Written</th>
+                  <th className="border border-black px-3 py-2">Assignment 1</th>
+                  <th className="border border-black px-3 py-2">Activity 1</th>
+                  <th className="border border-black px-3 py-2">Midterm Lab</th>
+                  <th className="border border-black px-3 py-2">Midterm Grade</th>
+                  <th className="border border-black px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,13 +368,13 @@ export default function UploadRecord() {
                       <td key={key} className="border border-black px-2 py-1 text-black">
                         {editingId === r.idNumber ? (
                           <input
-                            type={stringFields.includes(key) ? "text" : "number"}
+                            type={(stringFields as readonly string[]).includes(key) ? "text" : "number"}
                             value={(editedRecord as any)[key] ?? value}
                             onChange={(e) => {
                               const input = e.target.value;
                               setEditedRecord((prev) => ({
                                 ...prev,
-                                [key]: stringFields.includes(key)
+                                [key]: (stringFields as readonly string[]).includes(key)
                                   ? input
                                   : input === "" || isNaN(Number(input))
                                   ? 0
@@ -359,6 +388,7 @@ export default function UploadRecord() {
                         )}
                       </td>
                     ))}
+
                     <td className="border border-black px-3 py-1 flex gap-2 justify-center">
                       {editingId === r.idNumber ? (
                         <button
