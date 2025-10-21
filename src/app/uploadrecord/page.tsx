@@ -39,6 +39,7 @@ export default function UploadRecord() {
 
   const stringFields = ["idNumber", "firstName", "lastName"];
 
+  // Auto-clear status message
   useEffect(() => {
     if (status) {
       const timer = setTimeout(() => setStatus(""), 2000);
@@ -46,16 +47,24 @@ export default function UploadRecord() {
     }
   }, [status]);
 
+  // Firestore live sync
   useEffect(() => {
     const classCollection = collection(db, "classrecord");
     const unsubscribe = onSnapshot(classCollection, (snapshot) => {
       const data: StudentRecord[] = snapshot.docs.map((d) => {
         const record = d.data() as Partial<StudentRecord>;
-        let grade = 0;
-        if (record.midtermGrade !== undefined && record.midtermGrade !== null) {
-          const parsed = parseFloat(String(record.midtermGrade));
-          grade = !isNaN(parsed) ? parseFloat(parsed.toFixed(2)) : 0;
-        }
+
+        // Normalize all numeric fields to numbers
+        Object.keys(record).forEach((k) => {
+          if (!stringFields.includes(k)) {
+            (record as any)[k] = Number((record as any)[k]) || 0;
+          }
+        });
+
+        const grade =
+          record.midtermGrade !== undefined && record.midtermGrade !== null
+            ? Number(record.midtermGrade)
+            : 0;
 
         return {
           idNumber: d.id,
@@ -80,12 +89,14 @@ export default function UploadRecord() {
     return () => unsubscribe();
   }, []);
 
+  // File selection
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
     setFile(uploadedFile);
   };
 
+  // Excel upload handler
   const handleUpload = async () => {
     if (!file) {
       alert("Please select an Excel file first.");
@@ -157,11 +168,13 @@ export default function UploadRecord() {
     reader.readAsArrayBuffer(file);
   };
 
+  // Edit button
   const handleEdit = (record: StudentRecord) => {
     setEditingId(record.idNumber);
     setEditedRecord({ ...record });
   };
 
+  // Save edited record
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
@@ -174,26 +187,18 @@ export default function UploadRecord() {
       if (stringFields.includes(k)) {
         flexible[key] = String(v);
       } else {
-        const num = Number(v);
+        const num = typeof v === "number" ? v : Number(v);
         flexible[key] = isNaN(num) ? 0 : num;
       }
     });
 
-    const payload = Object.fromEntries(
-      Object.entries(flexible).map(([k, v]) => {
-        if (stringFields.includes(k)) {
-          return [k, String(v)];
-        }
-        return [k, Number(v)];
-      })
-    ) as Partial<StudentRecord>;
-
-    if (payload.midtermGrade !== undefined) {
-      payload.midtermGrade = parseFloat(Number(payload.midtermGrade).toFixed(2));
+    // Force midtermGrade to number type
+    if (flexible.midtermGrade !== undefined) {
+      flexible.midtermGrade = Number(flexible.midtermGrade);
     }
 
     try {
-      await setDoc(doc(db, "classrecord", editingId), payload, { merge: true });
+      await setDoc(doc(db, "classrecord", editingId), flexible, { merge: true });
       setStatus("✅ Successfully saved!");
       setEditingId(null);
       setEditedRecord({});
@@ -203,6 +208,7 @@ export default function UploadRecord() {
     }
   };
 
+  // Delete record
   const handleDelete = async (record: StudentRecord) => {
     if (confirm(`Are you sure you want to delete ${record.firstName} ${record.lastName}?`)) {
       await deleteDoc(doc(db, "classrecord", record.idNumber));
@@ -210,6 +216,7 @@ export default function UploadRecord() {
     }
   };
 
+  // Search filter
   const filteredRecords = records.filter((r) => {
     const q = search.toLowerCase();
     return (
@@ -219,6 +226,7 @@ export default function UploadRecord() {
     );
   });
 
+  // Display helper
   const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1) {
       return <span className="text-red-600 italic font-semibold">Missed</span>;
@@ -286,21 +294,27 @@ export default function UploadRecord() {
             <table className="min-w-full text-sm border-collapse text-black">
               <thead className="bg-blue-100 text-blue-900 font-semibold sticky top-0 z-10">
                 <tr>
-                  <th className="border border-black px-3 py-2">ID Number</th>
-                  <th className="border border-black px-3 py-2">Last Name</th>
-                  <th className="border border-black px-3 py-2">First Name</th>
-                  <th className="border border-black px-3 py-2">Attendance</th>
-                  <th className="border border-black px-3 py-2">Quiz 1</th>
-                  <th className="border border-black px-3 py-2">Quiz 2</th>
-                  <th className="border border-black px-3 py-2">Quiz 3</th>
-                  <th className="border border-black px-3 py-2">Quiz 4</th>
-                  <th className="border border-black px-3 py-2">Prelim</th>
-                  <th className="border border-black px-3 py-2">Midterm Written</th>
-                  <th className="border border-black px-3 py-2">Assignment 1</th>
-                  <th className="border border-black px-3 py-2">Activity 1</th>
-                  <th className="border border-black px-3 py-2">Midterm Lab</th>
-                  <th className="border border-black px-3 py-2">Midterm Grade</th>
-                  <th className="border border-black px-3 py-2">Actions</th>
+                  {[
+                    "ID Number",
+                    "Last Name",
+                    "First Name",
+                    "Attendance",
+                    "Quiz 1",
+                    "Quiz 2",
+                    "Quiz 3",
+                    "Quiz 4",
+                    "Prelim",
+                    "Midterm Written",
+                    "Assignment 1",
+                    "Activity 1",
+                    "Midterm Lab",
+                    "Midterm Grade",
+                    "Actions",
+                  ].map((h) => (
+                    <th key={h} className="border border-black px-3 py-2">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -326,7 +340,7 @@ export default function UploadRecord() {
                         {editingId === r.idNumber ? (
                           <input
                             type={stringFields.includes(key) ? "text" : "number"}
-                            value={String((editedRecord as any)[key] ?? value)}
+                            value={(editedRecord as any)[key] ?? value}
                             onChange={(e) => {
                               const input = e.target.value;
                               setEditedRecord((prev) => ({
@@ -345,7 +359,6 @@ export default function UploadRecord() {
                         )}
                       </td>
                     ))}
-
                     <td className="border border-black px-3 py-1 flex gap-2 justify-center">
                       {editingId === r.idNumber ? (
                         <button
