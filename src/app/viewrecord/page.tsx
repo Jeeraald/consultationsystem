@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,23 +7,23 @@ interface StudentData {
   firstName: string;
   lastName: string;
   attendance: number | string;
-  activity1: number | string;
-  assignment1: number | string;
-  quiz1: number | string;
-  quiz2: number | string;
-  quiz3: number | string;
-  quiz4: number | string;
-  prelim: number | string;
-  midtermwrittenexam: number | string;
-  midtermlabexam: number | string;
-  midtermGrade: number | string;
+  oral: number | string;
+  pasiugda1: number | string;
+  pasiugda2: number | string;
+  pasiugda3: number | string;
+  pasiugda4: number | string;
+  prefinal: number | string;
+  finalWritten: number | string;
+  individualGrade: number | string;
+  groupGrade: number | string;
+  finalLab: number | string;
+  finalGrade: number | string; // added field
 }
 
 export default function ViewRecordPage() {
   const router = useRouter();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
 
-  // ✅ Normalize numeric fields
   const normalizeNumber = (val: unknown, fallback = 0) => {
     if (val === undefined || val === null || val === "") return fallback;
     const n = Number(val);
@@ -35,21 +34,21 @@ export default function ViewRecordPage() {
     const record = sessionStorage.getItem("studentRecord");
     if (record) {
       const parsed = JSON.parse(record);
-      const normalized = {
+      setStudentData({
         ...parsed,
         attendance: normalizeNumber(parsed.attendance),
-        activity1: normalizeNumber(parsed.activity1),
-        assignment1: normalizeNumber(parsed.assignment1),
-        quiz1: normalizeNumber(parsed.quiz1),
-        quiz2: normalizeNumber(parsed.quiz2),
-        quiz3: normalizeNumber(parsed.quiz3),
-        quiz4: normalizeNumber(parsed.quiz4),
-        prelim: normalizeNumber(parsed.prelim),
-        midtermwrittenexam: normalizeNumber(parsed.midtermwrittenexam),
-        midtermlabexam: normalizeNumber(parsed.midtermlabexam),
-        midtermGrade: normalizeNumber(parsed.midtermGrade),
-      };
-      setStudentData(normalized);
+        oral: normalizeNumber(parsed.oral),
+        pasiugda1: normalizeNumber(parsed.pasiugda1),
+        pasiugda2: normalizeNumber(parsed.pasiugda2),
+        pasiugda3: normalizeNumber(parsed.pasiugda3),
+        pasiugda4: normalizeNumber(parsed.pasiugda4),
+        prefinal: normalizeNumber(parsed.prefinal),
+        finalWritten: normalizeNumber(parsed.finalWritten),
+        individualGrade: normalizeNumber(parsed.individualGrade),
+        groupGrade: normalizeNumber(parsed.groupGrade),
+        finalLab: normalizeNumber(parsed.finalLab),
+        finalGrade: normalizeNumber(parsed.finalGrade), // kept as is
+      });
     } else {
       router.push("/");
     }
@@ -57,141 +56,124 @@ export default function ViewRecordPage() {
 
   if (!studentData) return null;
 
-  // ✅ Format regular scores
   const formatScore = (value: number | string | undefined) => {
     if (value === null || value === undefined || value === "") return "";
     const num = Number(value);
     if (!Number.isNaN(num)) {
-      if (num === -1) {
-        return <span className="text-red-600 italic">Missed</span>;
-      }
+      if (num === -1) return <span className="text-red-600 italic">Missed</span>;
       return num;
     }
     return value;
   };
 
-  // ✅ Format midterm grade (safe)
-  const formatMidtermGrade = (value: number | string) => {
+  const formatFinalGrade = (value: number | string) => {
     const num = Number(value);
-    if (Number.isNaN(num)) return "0.00";
-    return num.toFixed(2);
+    return Number.isNaN(num) ? "0.00" : num.toFixed(2); // just display, no calculation
   };
 
-  // ✅ Grade color
-  const gradeNum = Number(studentData.midtermGrade);
   const gradeColor =
-    !Number.isNaN(gradeNum) && gradeNum >= 3.25
+    Number(studentData.finalGrade) >= 3.25
       ? "text-red-600 font-bold"
       : "text-green-600 font-bold";
 
-  const fullName = `${String(studentData.lastName || "").toUpperCase()}, ${String(
-    studentData.firstName || ""
-  ).toUpperCase()}`;
+  const fullName = `${studentData.lastName.toUpperCase()}, ${studentData.firstName.toUpperCase()}`;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-4">
-      <div className="bg-white rounded-3xl shadow-lg w-full max-w-4xl p-6 border border-gray-200">
-        <h1 className="text-2xl md:text-3xl font-bold text-blue-700 text-center mb-6">
-          Computer Programming 1 - Midterm Record
+      <div className="bg-white rounded-3xl shadow-lg w-full max-w-4xl p-6 border">
+        <h1 className="text-3xl font-bold text-blue-700 text-center mb-6">
+          Computer Programming 1
         </h1>
-
-        {/* Student Info */}
-        <div className="mb-6 text-black text-center">
-          <p className="font-semibold">
-            Name: <span className="font-bold">{fullName}</span>
-          </p>
+        <div className="text-center mb-6 text-black">
+          <p className="font-semibold">Name: {fullName}</p>
           <p>ID Number: {studentData.idNumber}</p>
         </div>
-
-        {/* Record Table */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-sm sm:text-base text-black">
+          <table className="w-full border-collapse text-black">
             <thead>
-              <tr className="bg-blue-100 text-blue-900">
-                <th className="px-4 py-2 border">Category</th>
-                <th className="px-4 py-2 border">Weight</th>
-                <th className="px-4 py-2 border">Component</th>
-                <th className="px-4 py-2 border">Score</th>
+              <tr className="bg-blue-100">
+                <th className="border px-4 py-2">Category</th>
+                <th className="border px-4 py-2">Weight</th>
+                <th className="border px-4 py-2">Component</th>
+                <th className="border px-4 py-2">Score</th>
               </tr>
             </thead>
             <tbody>
-              {/* Lecture Section */}
+              {/* CLASS STANDING */}
               <tr>
-                <td className="px-4 py-2 border font-semibold" rowSpan={7}>
+                <td className="border px-4 py-2 font-semibold" rowSpan={10}>
                   Lecture (67%)
                 </td>
-                <td className="px-4 py-2 border font-semibold">20%</td>
-                <td className="px-4 py-2 border">Attendance</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.attendance)}</td>
+                <td className="border px-4 py-2 font-semibold">10%</td>
+                <td className="border px-4 py-2">Attendance</td>
+                <td className="border px-4 py-2">{formatScore(studentData.attendance)}</td>
               </tr>
-
               <tr>
-                <td className="px-4 py-2 border font-semibold" rowSpan={5}>
+                <td className="border px-4 py-2 font-semibold" rowSpan={6}>
                   40%
                 </td>
-                <td className="px-4 py-2 border">Quiz 1</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.quiz1)}</td>
+                <td className="border px-4 py-2">Oral</td>
+                <td className="border px-4 py-2">{formatScore(studentData.oral)}</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 border">Quiz 2</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.quiz2)}</td>
+                <td className="border px-4 py-2">Pasiugda Day 1</td>
+                <td className="border px-4 py-2">{formatScore(studentData.pasiugda1)}</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 border">Quiz 3</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.quiz3)}</td>
+                <td className="border px-4 py-2">Pasiugda Day 2</td>
+                <td className="border px-4 py-2">{formatScore(studentData.pasiugda2)}</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 border">Quiz 4</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.quiz4)}</td>
+                <td className="border px-4 py-2">Pasiugda Day 3</td>
+                <td className="border px-4 py-2">{formatScore(studentData.pasiugda3)}</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 border">Prelim</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.prelim)}</td>
+                <td className="border px-4 py-2">Pasiugda Day 4</td>
+                <td className="border px-4 py-2">{formatScore(studentData.pasiugda4)}</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 border font-semibold">40%</td>
-                <td className="px-4 py-2 border">Midterm Exam</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.midtermwrittenexam)}</td>
+                <td className="border px-4 py-2">Prefinal</td>
+                <td className="border px-4 py-2">{formatScore(studentData.prefinal)}</td>
               </tr>
-
-              {/* Laboratory Section */}
-              <tr className="bg-gray-50">
-                <td className="px-4 py-2 border font-semibold" rowSpan={3}>
-                  Laboratory (33%)
+              <tr>
+                <td className="border px-4 py-2 font-semibold">30%</td>
+                <td className="border px-4 py-2">Final Written</td>
+                <td className="border px-4 py-2">{formatScore(studentData.finalWritten)}</td>
+              </tr>
+              <tr>
+                <td className="border px-4 py-2 font-semibold" rowSpan={2}>
+                  20%
                 </td>
-                <td className="px-4 py-2 border font-semibold">30%</td>
-                <td className="px-4 py-2 border">Assignment 1</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.assignment1)}</td>
+                <td className="border px-4 py-2">Individual Grade</td>
+                <td className="border px-4 py-2">{formatScore(studentData.individualGrade)}</td>
               </tr>
+              <tr>
+                <td className="border px-4 py-2">Group Grade</td>
+                <td className="border px-4 py-2">{formatScore(studentData.groupGrade)}</td>
+              </tr>
+              {/* FINAL LAB */}
               <tr className="bg-gray-50">
-                <td className="px-4 py-2 border font-semibold">30%</td>
-                <td className="px-4 py-2 border">Activity 1</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.activity1)}</td>
+                <td className="border px-4 py-2 font-semibold">Laboratory (33%)</td>
+                <td className="border px-4 py-2 font-semibold">100%</td>
+                <td className="border px-4 py-2">Final Laboratory Exam</td>
+                <td className="border px-4 py-2">{formatScore(studentData.finalLab)}</td>
               </tr>
-              <tr className="bg-gray-50">
-                <td className="px-4 py-2 border font-semibold">40%</td>
-                <td className="px-4 py-2 border">Midterm Lab Exam</td>
-                <td className="px-4 py-2 border">{formatScore(studentData.midtermlabexam)}</td>
-              </tr>
-
-              {/* Midterm Grade */}
+              {/* FINAL GRADE */}
               <tr className="bg-blue-100 font-bold">
-                <td className="px-4 py-2 border text-right" colSpan={3}>
-                  Midterm Grade
+                <td colSpan={3} className="border px-4 py-2 text-right">
+                  Final Grade
                 </td>
-                <td className={`px-4 py-2 border ${gradeColor}`}>
-                  {formatMidtermGrade(studentData.midtermGrade)}
+                <td className={`border px-4 py-2 ${gradeColor}`}>
+                  {formatFinalGrade(studentData.finalGrade)}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-
-        {/* Back Button */}
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 text-center">
           <button
             onClick={() => router.push("/")}
-            className="w-full sm:w-1/2 md:w-1/3 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 shadow-md transition"
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700"
           >
             Back to Login
           </button>

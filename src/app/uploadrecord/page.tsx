@@ -16,16 +16,17 @@ interface StudentRecord {
   firstName: string;
   lastName: string;
   attendance: number;
-  activity1: number;
-  assignment1: number;
-  quiz1: number;
-  quiz2: number;
-  quiz3: number;
-  quiz4: number;
-  prelim: number;
-  midtermwrittenexam: number;
-  midtermlabexam: number;
-  midtermGrade: number;
+  oral: number;
+  pasiugda1: number;
+  pasiugda2: number;
+  pasiugda3: number;
+  pasiugda4: number;
+  prefinal: number;
+  finalWritten: number;
+  individualGrade: number;
+  groupGrade: number;
+  finalLab: number;
+  finalGrade: number;
 }
 
 export default function UploadRecord() {
@@ -40,16 +41,17 @@ export default function UploadRecord() {
   const stringFields = ["idNumber", "firstName", "lastName"] as const;
   const numericFields: (keyof StudentRecord)[] = [
     "attendance",
-    "activity1",
-    "assignment1",
-    "quiz1",
-    "quiz2",
-    "quiz3",
-    "quiz4",
-    "prelim",
-    "midtermwrittenexam",
-    "midtermlabexam",
-    "midtermGrade",
+    "oral",
+    "pasiugda1",
+    "pasiugda2",
+    "pasiugda3",
+    "pasiugda4",
+    "prefinal",
+    "finalWritten",
+    "individualGrade",
+    "groupGrade",
+    "finalLab",
+    "finalGrade",
   ];
 
   // Auto-hide status after 2 seconds
@@ -75,26 +77,22 @@ export default function UploadRecord() {
           (normalized as any)[k] = Number.isNaN(num) ? 0 : num;
         });
 
-        const midtermRaw = (normalized as any).midtermGrade ?? 0;
-        const parsedMid = Number(midtermRaw);
-        const midtermGrade =
-          !Number.isNaN(parsedMid) ? parseFloat(parsedMid.toFixed(2)) : 0;
-
         return {
           idNumber: d.id,
           firstName: String(normalized.firstName ?? ""),
           lastName: String(normalized.lastName ?? ""),
           attendance: Number(normalized.attendance ?? 0),
-          quiz1: Number(normalized.quiz1 ?? 0),
-          quiz2: Number(normalized.quiz2 ?? 0),
-          quiz3: Number(normalized.quiz3 ?? 0),
-          quiz4: Number(normalized.quiz4 ?? 0),
-          prelim: Number(normalized.prelim ?? 0),
-          midtermwrittenexam: Number(normalized.midtermwrittenexam ?? 0),
-          assignment1: Number(normalized.assignment1 ?? 0),
-          activity1: Number(normalized.activity1 ?? 0),
-          midtermlabexam: Number(normalized.midtermlabexam ?? 0),
-          midtermGrade,
+          oral: Number(normalized.oral ?? 0),
+          pasiugda1: Number(normalized.pasiugda1 ?? 0),
+          pasiugda2: Number(normalized.pasiugda2 ?? 0),
+          pasiugda3: Number(normalized.pasiugda3 ?? 0),
+          pasiugda4: Number(normalized.pasiugda4 ?? 0),
+          prefinal: Number(normalized.prefinal ?? 0),
+          finalWritten: Number(normalized.finalWritten ?? 0),
+          individualGrade: Number(normalized.individualGrade ?? 0),
+          groupGrade: Number(normalized.groupGrade ?? 0),
+          finalLab: Number(normalized.finalLab ?? 0),
+          finalGrade: Number(normalized.finalGrade ?? 0),
         } as StudentRecord;
       });
       setRecords(data);
@@ -144,26 +142,22 @@ export default function UploadRecord() {
 
           if (!idNumber || !firstName || !lastName) continue;
 
-          const rawGrade = parseFloat(String(row[13] ?? 0));
-          const midtermGrade = !isNaN(rawGrade)
-            ? parseFloat(rawGrade.toFixed(2))
-            : 0;
-
           const dataToSave: StudentRecord = {
             idNumber,
             firstName,
             lastName,
             attendance: Number(row[3]) || 0,
-            quiz1: Number(row[4]) || 0,
-            quiz2: Number(row[5]) || 0,
-            quiz3: Number(row[6]) || 0,
-            quiz4: Number(row[7]) || 0,
-            prelim: Number(row[8]) || 0,
-            midtermwrittenexam: Number(row[9]) || 0,
-            assignment1: Number(row[10]) || 0,
-            activity1: Number(row[11]) || 0,
-            midtermlabexam: Number(row[12]) || 0,
-            midtermGrade,
+            oral: Number(row[4]) || 0,
+            pasiugda1: Number(row[5]) || 0,
+            pasiugda2: Number(row[6]) || 0,
+            pasiugda3: Number(row[7]) || 0,
+            pasiugda4: Number(row[8]) || 0,
+            prefinal: Number(row[9]) || 0,
+            finalWritten: Number(row[10]) || 0,
+            individualGrade: Number(row[11]) || 0,
+            groupGrade: Number(row[12]) || 0,
+            finalLab: Number(row[13]) || 0,
+            finalGrade: Number(row[14]) || 0,
           };
 
           await setDoc(doc(classCollection, idNumber), dataToSave, { merge: true });
@@ -188,7 +182,6 @@ export default function UploadRecord() {
     setEditedRecord({ ...record });
   };
 
-  // ✅ FIXED TYPE-SAFE HANDLE SAVE
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
@@ -205,9 +198,9 @@ export default function UploadRecord() {
       }
     });
 
-    if (cleanedData.midtermGrade !== undefined) {
-      cleanedData.midtermGrade = parseFloat(
-        Number(cleanedData.midtermGrade).toFixed(2)
+    if (cleanedData.finalGrade !== undefined) {
+      cleanedData.finalGrade = parseFloat(
+        Number(cleanedData.finalGrade).toFixed(2)
       );
     }
 
@@ -242,7 +235,7 @@ export default function UploadRecord() {
   const displayValue = (key: string, value: number | string) => {
     if (Number(value) === -1)
       return <span className="text-red-600 italic font-semibold">Missed</span>;
-    if (key === "midtermGrade") {
+    if (key === "finalGrade") {
       const parsed = parseFloat(String(value));
       return (
         <span className="text-black">
@@ -312,20 +305,17 @@ export default function UploadRecord() {
                   <th className="border border-black px-3 py-2">Last Name</th>
                   <th className="border border-black px-3 py-2">First Name</th>
                   <th className="border border-black px-3 py-2">Attendance</th>
-                  <th className="border border-black px-3 py-2">Quiz 1</th>
-                  <th className="border border-black px-3 py-2">Quiz 2</th>
-                  <th className="border border-black px-3 py-2">Quiz 3</th>
-                  <th className="border border-black px-3 py-2">Quiz 4</th>
-                  <th className="border border-black px-3 py-2">Prelim</th>
-                  <th className="border border-black px-3 py-2">
-                    Midterm Written
-                  </th>
-                  <th className="border border-black px-3 py-2">Assignment 1</th>
-                  <th className="border border-black px-3 py-2">Activity 1</th>
-                  <th className="border border-black px-3 py-2">Midterm Lab</th>
-                  <th className="border border-black px-3 py-2">
-                    Midterm Grade
-                  </th>
+                  <th className="border border-black px-3 py-2">Oral</th>
+                  <th className="border border-black px-3 py-2">Pasiugda 1</th>
+                  <th className="border border-black px-3 py-2">Pasiugda 2</th>
+                  <th className="border border-black px-3 py-2">Pasiugda 3</th>
+                  <th className="border border-black px-3 py-2">Pasiugda 4</th>
+                  <th className="border border-black px-3 py-2">Prefinal</th>
+                  <th className="border border-black px-3 py-2">Final Written</th>
+                  <th className="border border-black px-3 py-2">Individual Grade</th>
+                  <th className="border border-black px-3 py-2">Group Grade</th>
+                  <th className="border border-black px-3 py-2">Final Lab</th>
+                  <th className="border border-black px-3 py-2">Final Grade</th>
                   <th className="border border-black px-3 py-2">Actions</th>
                 </tr>
               </thead>
@@ -337,16 +327,17 @@ export default function UploadRecord() {
                       lastName: r.lastName,
                       firstName: r.firstName,
                       attendance: r.attendance,
-                      quiz1: r.quiz1,
-                      quiz2: r.quiz2,
-                      quiz3: r.quiz3,
-                      quiz4: r.quiz4,
-                      prelim: r.prelim,
-                      midtermwrittenexam: r.midtermwrittenexam,
-                      assignment1: r.assignment1,
-                      activity1: r.activity1,
-                      midtermlabexam: r.midtermlabexam,
-                      midtermGrade: r.midtermGrade,
+                      oral: r.oral,
+                      pasiugda1: r.pasiugda1,
+                      pasiugda2: r.pasiugda2,
+                      pasiugda3: r.pasiugda3,
+                      pasiugda4: r.pasiugda4,
+                      prefinal: r.prefinal,
+                      finalWritten: r.finalWritten,
+                      individualGrade: r.individualGrade,
+                      groupGrade: r.groupGrade,
+                      finalLab: r.finalLab,
+                      finalGrade: r.finalGrade,
                     }).map(([key, value]) => (
                       <td key={key} className="border border-black px-2 py-1 text-black">
                         {editingId === r.idNumber ? (

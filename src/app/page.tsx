@@ -14,33 +14,26 @@ interface StudentData {
   lastName: string;
   idNumber: string;
   attendance: number;
-  activity1: number;
-  activity2: number;
-  activity3: number;
-  assignment1: number;
-  assignment2: number;
-  assignment3: number;
-  assignment4: number;
-  quiz1: number;
-  quiz2: number;
-  quiz3: number;
-  quiz4: number;
-  quiz5: number;
-  prelim: number;
-  midtermwrittenexam: number;
-  midtermlabexam: number;
-  midtermGrade: number;
+  oral: number;
+  pasiugda1: number;
+  pasiugda2: number;
+  pasiugda3: number;
+  pasiugda4: number;
+  prefinal: number;
+  finalWritten: number;
+  individualGrade: number;
+  groupGrade: number;
+  finalLab: number;
+  finalGrade: number;
 }
 
 export default function HomePage() {
   const router = useRouter();
 
-  // Input states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [idNumber, setIdNumber] = useState("");
 
-  // Placeholder state
   const [placeholders, setPlaceholders] = useState<Record<FocusKeys, string>>({
     first: "",
     last: "",
@@ -56,14 +49,12 @@ export default function HomePage() {
     []
   );
 
-  // Focus state
   const [focused, setFocused] = useState<Record<FocusKeys, boolean>>({
     first: false,
     last: false,
     id: false,
   });
 
-  // Cleared state
   const [cleared, setCleared] = useState<Record<FocusKeys, boolean>>({
     first: false,
     last: false,
@@ -79,7 +70,6 @@ export default function HomePage() {
   const indexRef = useRef(0);
   const deletingRef = useRef(false);
 
-  // Typing animation
   useEffect(() => {
     const animate = () => {
       const newPlaceholders = { ...placeholders };
@@ -90,7 +80,6 @@ export default function HomePage() {
             : texts[key].slice(0, indexRef.current + 1);
         }
       });
-
       setPlaceholders(newPlaceholders);
       indexRef.current = deletingRef.current ? indexRef.current - 1 : indexRef.current + 1;
 
@@ -100,11 +89,9 @@ export default function HomePage() {
     };
 
     intervalRef.current = window.setInterval(animate, 400);
-
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-    // intentionally keeping placeholders, texts, focused, cleared in deps to keep animation responsive
   }, [focused, cleared, placeholders, texts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,43 +115,29 @@ export default function HomePage() {
         ) {
           found = true;
 
-          // Normalize numeric fields to real numbers to avoid .toFixed() errors
-          const normalizeNumber = (val: unknown, fallback = 0) => {
-            if (val === undefined || val === null || val === "") return fallback;
-            const n = Number(val);
-            return Number.isNaN(n) ? fallback : n;
-          };
-
-          const normalized: StudentData = {
+          const record: StudentData = {
             firstName: String(data.firstName || ""),
             lastName: String(data.lastName || ""),
-            idNumber: String(data.idNumber || dbId),
-            attendance: normalizeNumber(data.attendance),
-            activity1: normalizeNumber(data.activity1),
-            activity2: normalizeNumber(data.activity2),
-            activity3: normalizeNumber(data.activity3),
-            assignment1: normalizeNumber(data.assignment1),
-            assignment2: normalizeNumber(data.assignment2),
-            assignment3: normalizeNumber(data.assignment3),
-            assignment4: normalizeNumber(data.assignment4),
-            quiz1: normalizeNumber(data.quiz1),
-            quiz2: normalizeNumber(data.quiz2),
-            quiz3: normalizeNumber(data.quiz3),
-            quiz4: normalizeNumber(data.quiz4),
-            quiz5: normalizeNumber(data.quiz5),
-            prelim: normalizeNumber(data.prelim),
-            midtermwrittenexam: normalizeNumber(data.midtermwrittenexam),
-            midtermlabexam: normalizeNumber(data.midtermlabexam),
-            midtermGrade: normalizeNumber(data.midtermGrade),
+            idNumber: String(data.idNumber || ""),
+            attendance: Number(data.attendance) || 0,
+            oral: Number(data.oral) || 0,
+            pasiugda1: Number(data.pasiugda1) || 0,
+            pasiugda2: Number(data.pasiugda2) || 0,
+            pasiugda3: Number(data.pasiugda3) || 0,
+            pasiugda4: Number(data.pasiugda4) || 0,
+            prefinal: Number(data.prefinal) || 0,
+            finalWritten: Number(data.finalWritten) || 0,
+            individualGrade: Number(data.individualGrade) || 0,
+            groupGrade: Number(data.groupGrade) || 0,
+            finalLab: Number(data.finalLab) || 0,
+            finalGrade: Number(data.finalGrade) || 0,
           };
 
-          // Save normalized object
-          sessionStorage.setItem("studentRecord", JSON.stringify(normalized));
-          localStorage.setItem("idNumber", normalized.idNumber);
-          setStudentData(normalized);
+          sessionStorage.setItem("studentRecord", JSON.stringify(record));
+          localStorage.setItem("idNumber", record.idNumber);
+          setStudentData(record);
 
-          // Use numeric comparison (normalized.midtermGrade is guaranteed number)
-          if (normalized.midtermGrade <= 3.0) {
+          if (record.finalGrade >= 50) {
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 5000);
           }
@@ -275,29 +248,29 @@ export default function HomePage() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.7 }}
               >
-                Midterm Grade
+                Final Grade
               </motion.h1>
 
               <motion.p
                 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold ${
-                  studentData.midtermGrade >= 3.25 ? "text-red-600" : "text-green-600"
+                  studentData.finalGrade >= 50 ? "text-green-600" : "text-red-600"
                 }`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 150 }}
               >
-                {studentData.midtermGrade.toFixed(2)}
+                {studentData.finalGrade.toFixed(2)}
               </motion.p>
 
               <motion.p
                 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold ${
-                  studentData.midtermGrade >= 3.25 ? "text-red-500" : "text-green-500"
+                  studentData.finalGrade >= 50 ? "text-green-500" : "text-red-500"
                 }`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
-                {studentData.midtermGrade >= 3.25 ? "FAILED ❌" : "PASSED 🎉"}
+                {studentData.finalGrade >= 50 ? "PASSED 🎉" : "FAILED ❌"}
               </motion.p>
 
               {showRecordButton && (
