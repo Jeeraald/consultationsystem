@@ -17,7 +17,7 @@ interface StudentData {
   individualGrade: number | string;
   groupGrade: number | string;
   finalLab: number | string;
-  finalGrade: number | string; // added field
+  finalGrade: number | string;
 }
 
 export default function ViewRecordPage() {
@@ -31,8 +31,13 @@ export default function ViewRecordPage() {
   };
 
   useEffect(() => {
-    const record = sessionStorage.getItem("studentRecord");
-    if (record) {
+    try {
+      const record = sessionStorage.getItem("studentRecord");
+      if (!record) {
+        router.push("/");
+        return;
+      }
+
       const parsed = JSON.parse(record);
       setStudentData({
         ...parsed,
@@ -47,16 +52,16 @@ export default function ViewRecordPage() {
         individualGrade: normalizeNumber(parsed.individualGrade),
         groupGrade: normalizeNumber(parsed.groupGrade),
         finalLab: normalizeNumber(parsed.finalLab),
-        finalGrade: normalizeNumber(parsed.finalGrade), // kept as is
+        finalGrade: normalizeNumber(parsed.finalGrade),
       });
-    } else {
+    } catch {
       router.push("/");
     }
   }, [router]);
 
   if (!studentData) return null;
 
-  const formatScore = (value: number | string | undefined) => {
+  const formatScore = (value?: number | string): React.ReactNode => {
     if (value === null || value === undefined || value === "") return "";
     const num = Number(value);
     if (!Number.isNaN(num)) {
@@ -68,11 +73,12 @@ export default function ViewRecordPage() {
 
   const formatFinalGrade = (value: number | string) => {
     const num = Number(value);
-    return Number.isNaN(num) ? "0.00" : num.toFixed(2); // just display, no calculation
+    return Number.isNaN(num) ? "0.00" : num.toFixed(2);
   };
 
+  const finalGradeNum = Number(studentData.finalGrade) || 0;
   const gradeColor =
-    Number(studentData.finalGrade) >= 3.25
+    finalGradeNum >= 3.25
       ? "text-red-600 font-bold"
       : "text-green-600 font-bold";
 

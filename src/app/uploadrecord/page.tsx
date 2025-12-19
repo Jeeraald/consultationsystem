@@ -25,7 +25,7 @@ interface StudentRecord {
   finalWritten: number;
   individualGrade: number;
   groupGrade: number;
-  finalLab: number;
+  finalLab: number;  
   finalGrade: number;
 }
 
@@ -182,6 +182,7 @@ export default function UploadRecord() {
     setEditedRecord({ ...record });
   };
 
+  // Handle save (fixed cleanData)
   const handleSave = async () => {
     if (!editingId || !editedRecord) return;
 
@@ -198,6 +199,7 @@ export default function UploadRecord() {
       }
     });
 
+    // Ensure finalGrade is always 2 decimal places
     if (cleanedData.finalGrade !== undefined) {
       cleanedData.finalGrade = parseFloat(
         Number(cleanedData.finalGrade).toFixed(2)

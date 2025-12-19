@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
-import Confetti from "react-confetti";
+import dynamic from "next/dynamic";
+
+// Dynamically import Confetti (no SSR)
+const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 
 type FocusKeys = "first" | "last" | "id";
 
@@ -70,6 +73,7 @@ export default function HomePage() {
   const indexRef = useRef(0);
   const deletingRef = useRef(false);
 
+  // Animated placeholders
   useEffect(() => {
     const animate = () => {
       const newPlaceholders = { ...placeholders };
@@ -92,8 +96,9 @@ export default function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [focused, cleared, placeholders, texts]);
+  }, [focused, cleared, texts]); // Removed placeholders to avoid rerender loop
 
+  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -104,9 +109,9 @@ export default function HomePage() {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Partial<StudentData>;
-        const dbFirst = (data.firstName || "").trim().toLowerCase();
-        const dbLast = (data.lastName || "").trim().toLowerCase();
-        const dbId = String(data.idNumber || "").trim();
+        const dbFirst = (data?.firstName || "").trim().toLowerCase();
+        const dbLast = (data?.lastName || "").trim().toLowerCase();
+        const dbId = String(data?.idNumber || "").trim();
 
         if (
           dbFirst === firstName.trim().toLowerCase() &&
@@ -116,25 +121,29 @@ export default function HomePage() {
           found = true;
 
           const record: StudentData = {
-            firstName: String(data.firstName || ""),
-            lastName: String(data.lastName || ""),
-            idNumber: String(data.idNumber || ""),
-            attendance: Number(data.attendance) || 0,
-            oral: Number(data.oral) || 0,
-            pasiugda1: Number(data.pasiugda1) || 0,
-            pasiugda2: Number(data.pasiugda2) || 0,
-            pasiugda3: Number(data.pasiugda3) || 0,
-            pasiugda4: Number(data.pasiugda4) || 0,
-            prefinal: Number(data.prefinal) || 0,
-            finalWritten: Number(data.finalWritten) || 0,
-            individualGrade: Number(data.individualGrade) || 0,
-            groupGrade: Number(data.groupGrade) || 0,
-            finalLab: Number(data.finalLab) || 0,
-            finalGrade: Number(data.finalGrade) || 0,
+            firstName: String(data?.firstName || ""),
+            lastName: String(data?.lastName || ""),
+            idNumber: String(data?.idNumber || ""),
+            attendance: Number(data?.attendance) || 0,
+            oral: Number(data?.oral) || 0,
+            pasiugda1: Number(data?.pasiugda1) || 0,
+            pasiugda2: Number(data?.pasiugda2) || 0,
+            pasiugda3: Number(data?.pasiugda3) || 0,
+            pasiugda4: Number(data?.pasiugda4) || 0,
+            prefinal: Number(data?.prefinal) || 0,
+            finalWritten: Number(data?.finalWritten) || 0,
+            individualGrade: Number(data?.individualGrade) || 0,
+            groupGrade: Number(data?.groupGrade) || 0,
+            finalLab: Number(data?.finalLab) || 0,
+            finalGrade: Number(data?.finalGrade) || 0,
           };
 
-          sessionStorage.setItem("studentRecord", JSON.stringify(record));
-          localStorage.setItem("idNumber", record.idNumber);
+          // Client-side only
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("studentRecord", JSON.stringify(record));
+            localStorage.setItem("idNumber", record.idNumber);
+          }
+
           setStudentData(record);
 
           if (record.finalGrade >= 50) {
@@ -179,7 +188,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200 p-4 sm:p-6">
-      {showConfetti && <Confetti width={window.innerWidth} height={window.innerHeight} />}
+      {showConfetti && <Confetti width={typeof window !== "undefined" ? window.innerWidth : 0} height={typeof window !== "undefined" ? window.innerHeight : 0} />}
 
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[90%] sm:max-w-md md:max-w-lg lg:max-w-xl p-6 sm:p-8 md:p-10 lg:p-12">
         {!studentData ? (
