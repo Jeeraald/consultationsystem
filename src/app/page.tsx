@@ -96,7 +96,7 @@ export default function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [focused, cleared, texts]); // Removed placeholders to avoid rerender loop
+  }, [focused, cleared, texts]);
 
   // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,7 +146,7 @@ export default function HomePage() {
 
           setStudentData(record);
 
-          if (record.finalGrade >= 50) {
+          if (record.finalGrade <= 3.0) {
             setShowConfetti(true);
             setTimeout(() => setShowConfetti(false), 5000);
           }
@@ -188,7 +188,12 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-200 p-4 sm:p-6">
-      {showConfetti && <Confetti width={typeof window !== "undefined" ? window.innerWidth : 0} height={typeof window !== "undefined" ? window.innerHeight : 0} />}
+      {showConfetti && (
+        <Confetti
+          width={typeof window !== "undefined" ? window.innerWidth : 0}
+          height={typeof window !== "undefined" ? window.innerHeight : 0}
+        />
+      )}
 
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[90%] sm:max-w-md md:max-w-lg lg:max-w-xl p-6 sm:p-8 md:p-10 lg:p-12">
         {!studentData ? (
@@ -262,7 +267,7 @@ export default function HomePage() {
 
               <motion.p
                 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold ${
-                  studentData.finalGrade >= 50 ? "text-green-600" : "text-red-600"
+                  studentData.finalGrade <= 3.0 ? "text-green-600" : "text-red-600"
                 }`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -273,13 +278,13 @@ export default function HomePage() {
 
               <motion.p
                 className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold ${
-                  studentData.finalGrade >= 50 ? "text-green-500" : "text-red-500"
+                  studentData.finalGrade <= 3.0 ? "text-green-500" : "text-red-500"
                 }`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
-                {studentData.finalGrade >= 50 ? "PASSED 🎉" : "FAILED ❌"}
+                {studentData.finalGrade <= 3.0 ? "PASSED 🎉" : "FAILED ❌"}
               </motion.p>
 
               {showRecordButton && (
